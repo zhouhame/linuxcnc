@@ -1,5 +1,5 @@
 /********************************************************************
-* Description: iniaxis.cc
+* Description: inijoint.cc
 *   INI file initialization routines for joint/axis NML
 *
 *   Derived from a work by Fred Proctor & Will Shackleford
@@ -27,20 +27,20 @@
 #include "emc.hh"
 #include "rcs_print.hh"
 #include "emcIniFile.hh"
-#include "iniaxis.hh"		// these decls
+#include "inijoint.hh"		// these decls
 #include "emcglb.h"		// EMC_DEBUG
 #include "emccfg.h"		// default values for globals
 
 
 /*
-  loadAxis(int axis)
+  loadJoint(int joint)
 
-  Loads ini file params for axis, axis = 0, ...
+  Loads ini file params for joint, joint = 0, ...
 
-  TYPE <LINEAR ANGULAR>        type of axis
+  TYPE <LINEAR ANGULAR>        type of joint
   UNITS <float>                units per mm or deg
-  MAX_VELOCITY <float>         max vel for axis
-  MAX_ACCELERATION <float>     max accel for axis
+  MAX_VELOCITY <float>         max vel for joint
+  MAX_ACCELERATION <float>     max accel for joint
   BACKLASH <float>             backlash
   INPUT_SCALE <float> <float>  scale, offset
   OUTPUT_SCALE <float> <float> scale, offset
@@ -55,38 +55,35 @@
   HOME_LATCH_VEL <float>       homing speed, latch phase
   HOME_USE_INDEX <bool>        use index pulse when homing?
   HOME_IGNORE_LIMITS <bool>    ignore limit switches when homing?
-  COMP_FILE <filename>         file of axis compensation points
+  COMP_FILE <filename>         file of joint compensation points
 
   calls:
 
-  emcAxisSetAxis(int axis, unsigned char axisType);
-  emcAxisSetUnits(int axis, double units);
-  emcAxisSetBacklash(int axis, double backlash);
-  emcAxisSetInterpolationRate(int axis, int rate);
-  emcAxisSetInputScale(int axis, double scale, double offset);
-  emcAxisSetOutputScale(int axis, double scale, double offset);
-  emcAxisSetMinPositionLimit(int axis, double limit);
-  emcAxisSetMaxPositionLimit(int axis, double limit);
-  emcAxisSetFerror(int axis, double ferror);
-  emcAxisSetMinFerror(int axis, double ferror);
-  emcAxisSetHomingParams(int axis, double home, double offset,
+  emcJointSetJoint(int joint, unsigned char jointType);
+  emcJointSetUnits(int joint, double units);
+  emcJointSetBacklash(int joint, double backlash);
+  emcJointSetInterpolationRate(int joint, int rate);
+  emcJointSetInputScale(int joint, double scale, double offset);
+  emcJointSetOutputScale(int joint, double scale, double offset);
+  emcJointSetMinPositionLimit(int joint, double limit);
+  emcJointSetMaxPositionLimit(int joint, double limit);
+  emcJointSetFerror(int joint, double ferror);
+  emcJointSetMinFerror(int joint, double ferror);
+  emcJointSetHomingParams(int joint, double home, double offset,
     double search_vel, double latch_vel, int use_index, int ignore_limits );
-  emcAxisActivate(int axis);
-  emcAxisDeactivate(int axis);
-  emcAxisSetMaxVelocity(int axis, double vel);
-  emcAxisSetMaxAcceleration(int axis, double acc);
-  emcAxisLoadComp(int axis, const char * file);
-  emcAxisLoadComp(int axis, const char * file);
+  emcJointActivate(int joint);
+  emcJointDeactivate(int joint);
+  emcJointSetMaxVelocity(int joint, double vel);
+  emcJointSetMaxAcceleration(int joint, double acc);
+  emcJointLoadComp(int joint, const char * file);
+  emcJointLoadComp(int joint, const char * file);
   */
 
-//FIXME-AJ: comment out
-#if 0
-
-static int loadAxis(int axis, EmcIniFile *axisIniFile)
+static int loadJoint(int joint, EmcIniFile *jointIniFile)
 {
-    char axisString[16];
+    char jointString[16];
     const char *inistring;
-    EmcAxisType axisType;
+    EmcJointType jointType;
     double units;
     double backlash;
     double offset;
@@ -105,153 +102,153 @@ static int loadAxis(int axis, EmcIniFile *axisIniFile)
     double maxAcceleration;
     double ferror;
 
-    // compose string to match, axis = 0 -> AXIS_0, etc.
-    sprintf(axisString, "AXIS_%d", axis);
+    // compose string to match, joint = 0 -> JOINT_0, etc.
+    sprintf(jointString, "JOINT_%d", joint);
 
-    axisIniFile->EnableExceptions(EmcIniFile::ERR_CONVERSION);
+    jointIniFile->EnableExceptions(EmcIniFile::ERR_CONVERSION);
     
     try {
-        // set axis type
-        axisType = EMC_AXIS_LINEAR;	// default
-        axisIniFile->Find(&axisType, "TYPE", axisString);
+        // set joint type
+        jointType = EMC_JOINT_LINEAR;	// default
+        jointIniFile->Find(&jointType, "TYPE", jointString);
 
-        if (0 != emcAxisSetAxis(axis, axisType)) {
+        if (0 != emcJointSetJoint(joint, jointType)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetAxis\n");
+                rcs_print_error("bad return from emcJointSetJoint\n");
             }
             return -1;
         }
 
         // set units
-        if(axisType == EMC_AXIS_LINEAR){
+        if(jointType == EMC_JOINT_LINEAR){
             units = emcTrajGetLinearUnits();
-            axisIniFile->FindLinearUnits(&units, "UNITS", axisString);
+            jointIniFile->FindLinearUnits(&units, "UNITS", jointString);
         }else{
             units = emcTrajGetAngularUnits();
-            axisIniFile->FindAngularUnits(&units, "UNITS", axisString);
+            jointIniFile->FindAngularUnits(&units, "UNITS", jointString);
         }
 
-        if (0 != emcAxisSetUnits(axis, units)) {
+        if (0 != emcJointSetUnits(joint, units)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetUnits\n");
+                rcs_print_error("bad return from emcJointSetUnits\n");
             }
             return -1;
         }
 
         // set backlash
         backlash = 0;	                // default
-        axisIniFile->Find(&backlash, "BACKLASH", axisString);
+        jointIniFile->Find(&backlash, "BACKLASH", jointString);
 
-        if (0 != emcAxisSetBacklash(axis, backlash)) {
+        if (0 != emcJointSetBacklash(joint, backlash)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetBacklash\n");
+                rcs_print_error("bad return from emcJointSetBacklash\n");
             }
             return -1;
         }
 
         // set min position limit
         limit = -1e99;	                // default
-        axisIniFile->Find(&limit, "MIN_LIMIT", axisString);
+        jointIniFile->Find(&limit, "MIN_LIMIT", jointString);
 
-        if (0 != emcAxisSetMinPositionLimit(axis, limit)) {
+        if (0 != emcJointSetMinPositionLimit(joint, limit)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetMinPositionLimit\n");
+                rcs_print_error("bad return from emcJointSetMinPositionLimit\n");
             }
             return -1;
         }
 
         // set max position limit
         limit = 1e99;	                // default
-        axisIniFile->Find(&limit, "MAX_LIMIT", axisString);
+        jointIniFile->Find(&limit, "MAX_LIMIT", jointString);
 
-        if (0 != emcAxisSetMaxPositionLimit(axis, limit)) {
+        if (0 != emcJointSetMaxPositionLimit(joint, limit)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetMaxPositionLimit\n");
+                rcs_print_error("bad return from emcJointSetMaxPositionLimit\n");
             }
             return -1;
         }
 
         // set following error limit (at max speed)
         ferror = 1;	                // default
-        axisIniFile->Find(&ferror, "FERROR", axisString);
+        jointIniFile->Find(&ferror, "FERROR", jointString);
 
-        if (0 != emcAxisSetFerror(axis, ferror)) {
+        if (0 != emcJointSetFerror(joint, ferror)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetFerror\n");
+                rcs_print_error("bad return from emcJointSetFerror\n");
             }
             return -1;
         }
 
         // do MIN_FERROR, if it's there. If not, use value of maxFerror above
-        axisIniFile->Find(&ferror, "MIN_FERROR", axisString);
+        jointIniFile->Find(&ferror, "MIN_FERROR", jointString);
 
-        if (0 != emcAxisSetMinFerror(axis, ferror)) {
+        if (0 != emcJointSetMinFerror(joint, ferror)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetMinFerror\n");
+                rcs_print_error("bad return from emcJointSetMinFerror\n");
             }
             return -1;
         }
 
         // set homing paramsters (total of 6)
         home = 0;	                // default
-        axisIniFile->Find(&home, "HOME", axisString);
+        jointIniFile->Find(&home, "HOME", jointString);
         offset = 0;	                // default
-        axisIniFile->Find(&offset, "HOME_OFFSET", axisString);
+        jointIniFile->Find(&offset, "HOME_OFFSET", jointString);
         search_vel = 0;	                // default
-        axisIniFile->Find(&search_vel, "HOME_SEARCH_VEL", axisString);
+        jointIniFile->Find(&search_vel, "HOME_SEARCH_VEL", jointString);
         latch_vel = 0;	                // default
-        axisIniFile->Find(&latch_vel, "HOME_LATCH_VEL", axisString);
+        jointIniFile->Find(&latch_vel, "HOME_LATCH_VEL", jointString);
         home_vel = -1;	                // default (rapid)
-        axisIniFile->Find(&home_vel, "HOME_VEL", axisString);
+        jointIniFile->Find(&home_vel, "HOME_VEL", jointString);
         is_shared = false;	        // default
-        axisIniFile->Find(&is_shared, "HOME_IS_SHARED", axisString);
+        jointIniFile->Find(&is_shared, "HOME_IS_SHARED", jointString);
         use_index = false;	        // default
-        axisIniFile->Find(&use_index, "HOME_USE_INDEX", axisString);
+        jointIniFile->Find(&use_index, "HOME_USE_INDEX", jointString);
         ignore_limits = false;	        // default
-        axisIniFile->Find(&ignore_limits, "HOME_IGNORE_LIMITS", axisString);
+        jointIniFile->Find(&ignore_limits, "HOME_IGNORE_LIMITS", jointString);
         sequence = -1;	                // default
-        axisIniFile->Find(&sequence, "HOME_SEQUENCE", axisString);
+        jointIniFile->Find(&sequence, "HOME_SEQUENCE", jointString);
         volatile_home = 0;	        // default
-        axisIniFile->Find(&volatile_home, "VOLATILE_HOME", axisString);
+        jointIniFile->Find(&volatile_home, "VOLATILE_HOME", jointString);
 
         // issue NML message to set all params
-        if (0 != emcAxisSetHomingParams(axis, home, offset, home_vel, search_vel,
+        if (0 != emcJointSetHomingParams(joint, home, offset, home_vel, search_vel,
                                         latch_vel, (int)use_index, (int)ignore_limits,
                                         (int)is_shared, sequence, volatile_home)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetHomingParams\n");
+                rcs_print_error("bad return from emcJointSetHomingParams\n");
             }
             return -1;
         }
 
         // set maximum velocity
-        maxVelocity = DEFAULT_AXIS_MAX_VELOCITY;
-        axisIniFile->Find(&maxVelocity, "MAX_VELOCITY", axisString);
+        maxVelocity = DEFAULT_JOINT_MAX_VELOCITY;
+        jointIniFile->Find(&maxVelocity, "MAX_VELOCITY", jointString);
 
-        if (0 != emcAxisSetMaxVelocity(axis, maxVelocity)) {
+        if (0 != emcJointSetMaxVelocity(joint, maxVelocity)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetMaxVelocity\n");
+                rcs_print_error("bad return from emcJointSetMaxVelocity\n");
             }
             return -1;
         }
 
-        maxAcceleration = DEFAULT_AXIS_MAX_ACCELERATION;
-        axisIniFile->Find(&maxAcceleration, "MAX_ACCELERATION", axisString);
+        maxAcceleration = DEFAULT_JOINT_MAX_ACCELERATION;
+        jointIniFile->Find(&maxAcceleration, "MAX_ACCELERATION", jointString);
 
-        if (0 != emcAxisSetMaxAcceleration(axis, maxAcceleration)) {
+        if (0 != emcJointSetMaxAcceleration(joint, maxAcceleration)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print_error("bad return from emcAxisSetMaxAcceleration\n");
+                rcs_print_error("bad return from emcJointSetMaxAcceleration\n");
             }
             return -1;
         }
 
         comp_file_type = 0;             // default
-        axisIniFile->Find(&comp_file_type, "COMP_FILE_TYPE", axisString);
+        jointIniFile->Find(&comp_file_type, "COMP_FILE_TYPE", jointString);
 
-        if (NULL != (inistring = axisIniFile->Find("COMP_FILE", axisString))) {
-            if (0 != emcAxisLoadComp(axis, inistring, comp_file_type)) {
+        if (NULL != (inistring = jointIniFile->Find("COMP_FILE", jointString))) {
+            if (0 != emcJointLoadComp(joint, inistring, comp_file_type)) {
                 if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                    rcs_print_error("bad return from emcAxisLoadComp\n");
+                    rcs_print_error("bad return from emcJointLoadComp\n");
                 }
                 return -1;
             }
@@ -263,35 +260,35 @@ static int loadAxis(int axis, EmcIniFile *axisIniFile)
         return -1;
     }
 
-    // lastly, activate axis. Do this last so that the motion controller
+    // lastly, activate joint. Do this last so that the motion controller
     // won't flag errors midway during configuration
-    emcAxisActivate(axis);
+    emcJointActivate(joint);
 
     return 0;
 }
 
 
 /*
-  iniAxis(int axis, const char *filename)
+  iniJoint(int joint, const char *filename)
 
-  Loads ini file parameters for specified axis, [0 .. AXES - 1]
+  Loads ini file parameters for specified joint, [0 .. AXES - 1]
 
   Looks for AXES in TRAJ section for how many to do, up to
-  EMC_AXIS_MAX.
+  EMC_JOINT_MAX.
  */
-int iniAxis(int axis, const char *filename)
+int iniJoint(int joint, const char *filename)
 {
     int axes;
-    EmcIniFile axisIniFile(EmcIniFile::ERR_TAG_NOT_FOUND |
+    EmcIniFile jointIniFile(EmcIniFile::ERR_TAG_NOT_FOUND |
                            EmcIniFile::ERR_SECTION_NOT_FOUND |
                            EmcIniFile::ERR_CONVERSION);
 
-    if (axisIniFile.Open(filename) == false) {
+    if (jointIniFile.Open(filename) == false) {
 	return -1;
     }
 
     try {
-        axisIniFile.Find(&axes, "AXES", "TRAJ");
+        jointIniFile.Find(&axes, "AXES", "TRAJ");
     }
 
     catch(EmcIniFile::Exception &e){
@@ -299,13 +296,13 @@ int iniAxis(int axis, const char *filename)
         return -1;
     }
 
-    if (axis < 0 || axis >= axes) {
-	// requested axis exceeds machine axes
+    if (joint < 0 || joint >= axes) {
+	// requested joint exceeds machine axes
 	return -1;
     }
 
     // load its values
-    if (0 != loadAxis(axis, &axisIniFile)) {
+    if (0 != loadJoint(joint, &jointIniFile)) {
         return -1;
     }
 
@@ -375,17 +372,3 @@ int iniFormatFloat2(char *fmt, const char *var, const char *val)
 }
 
 // end temporary insert of ini file stuff
-
-/*
-  dumpAxis(int axis, const char *filename, EMC_AXIS_STAT *status)
-
-  This used to rewrite an AXIS_n section of the ini file.  Everyone
-  now seems to think this is a bad idea.  It's certainly incompatible
-  with template/sample configurations that should not be changed by
-  the user OR the program.
- */
-int dumpAxis(int axis, const char *filename, EMC_AXIS_STAT * status)
-{
-    return 0;
-}
-#endif

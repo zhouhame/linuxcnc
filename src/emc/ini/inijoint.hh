@@ -1,5 +1,5 @@
 /********************************************************************
-* Description: iniaxis.hh
+* Description: inijoint.hh
 *
 *   Derived from a work by Fred Proctor & Will Shackleford
 *
@@ -14,18 +14,12 @@
 * $Author$
 * $Date$
 ********************************************************************/
-#ifndef INIAXIS_HH
-#define INIAXIS_HH
+#ifndef INIJOINT_HH
+#define INIJOINT_HH
 
-#include "emc.hh"		// EMC_AXIS_STAT
+#include "emc.hh"		// EMC_JOINT_STAT
 
-/* initializes axis modules from ini file */
-//FIXME-AJ: disable for now
-#if 0
-extern int iniAxis(int axis, const char *filename);
+/* initializes joint modules from ini file */
+extern int iniJoint(int joint, const char *filename);
 
-/* dump axis stat to ini file */
-extern int dumpAxis(int axis, const char *filename,
-		    EMC_AXIS_STAT * status);
-#endif
 #endif
