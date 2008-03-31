@@ -44,6 +44,11 @@ double JOINT_MAX_VELOCITY[EMC_JOINT_MAX] = { 1.0 };	/*! \todo FIXME - I think
 							   0.0 */
 double JOINT_MAX_ACCELERATION[EMC_JOINT_MAX] = { 1.0 };
 
+double AXIS_MAX_VELOCITY[EMC_JOINT_MAX] = { 1.0 };	/*! \todo FIXME - I think
+							   these should be
+							   0.0 */
+double AXIS_MAX_ACCELERATION[EMC_JOINT_MAX] = { 1.0 };
+
 double SPINDLE_OFF_WAIT = DEFAULT_SPINDLE_OFF_WAIT;
 double SPINDLE_ON_WAIT = DEFAULT_SPINDLE_ON_WAIT;
 
@@ -64,5 +69,7 @@ void emcInitGlobals()
 
     for (t = 0; t < EMC_JOINT_MAX; t++) {
 	JOINT_MAX_VELOCITY[t] = DEFAULT_JOINT_MAX_VELOCITY;
+	//FIXME-AJ: temp hack
+	AXIS_MAX_VELOCITY[t] = DEFAULT_JOINT_MAX_VELOCITY;
     }
 }

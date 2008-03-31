@@ -1421,7 +1421,7 @@ class LivePlotter:
             vupdate(vars.spindlerate, int(100 * self.stat.spindlerate + .5))
         if time.time() > feedrate_blackout:
             vupdate(vars.feedrate, int(100 * self.stat.feedrate + .5))
-        vupdate(vars.override_limits, self.stat.axis[0]['override_limits'])
+        vupdate(vars.override_limits, self.stat.joint[0]['override_limits'])
         on_any_limit = 0
         for i, l in enumerate(self.stat.limit):
             if self.stat.axis_mask & (1<<i) and l:
