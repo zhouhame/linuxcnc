@@ -109,7 +109,7 @@ static int loadJoint(int joint, EmcIniFile *jointIniFile)
     
     try {
         // set joint type
-        jointType = EMC_JOINT_LINEAR;	// default
+        jointType = EMC_LINEAR;	// default
         jointIniFile->Find(&jointType, "TYPE", jointString);
 
         if (0 != emcJointSetJoint(joint, jointType)) {
@@ -120,7 +120,7 @@ static int loadJoint(int joint, EmcIniFile *jointIniFile)
         }
 
         // set units
-        if(jointType == EMC_JOINT_LINEAR){
+        if(jointType == EMC_LINEAR){
             units = emcTrajGetLinearUnits();
             jointIniFile->FindLinearUnits(&units, "UNITS", jointString);
         }else{
@@ -309,66 +309,3 @@ int iniJoint(int joint, const char *filename)
     return 0;
 }
 
-/*! \todo FIXME-- begin temporary insert of ini file stuff */
-
-#define INIFILE_MIN_FLOAT_PRECISION 3
-#define INIFILE_BACKUP_SUFFIX ".bak"
-
-int iniGetFloatPrec(const char *str)
-{
-    const char *ptr = str;
-    int prec = 0;
-
-    // find '.', return min precision if no decimal point
-    while (1) {
-	if (*ptr == 0) {
-	    return INIFILE_MIN_FLOAT_PRECISION;
-	}
-	if (*ptr == '.') {
-	    break;
-	}
-	ptr++;
-    }
-
-    // ptr is on '.', so step over
-    ptr++;
-
-    // count number of digits until whitespace or end or non-digit
-    while (1) {
-	if (*ptr == 0) {
-	    break;
-	}
-	if (!isdigit(*ptr)) {
-	    break;
-	}
-	// else it's a digit
-	prec++;
-	ptr++;
-    }
-
-    return prec >
-	INIFILE_MIN_FLOAT_PRECISION ? prec : INIFILE_MIN_FLOAT_PRECISION;
-}
-
-int iniFormatFloat(char *fmt, const char *var, const char *val)
-{
-    sprintf(fmt, "%s = %%.%df\n", var, iniGetFloatPrec(val));
-
-    return 0;
-}
-
-// 'val' in this case is a string with a pair of floats, the first
-// which sets the precision
-int iniFormatFloat2(char *fmt, const char *var, const char *val)
-{
-    int prec;
-
-    /*! \todo FIXME-- should capture each one's float precision; right
-       now we're using the first as the precision for both */
-    prec = iniGetFloatPrec(val);
-    sprintf(fmt, "%s = %%.%df %%.%df\n", var, prec, prec);
-
-    return 0;
-}
-
-// end temporary insert of ini file stuff
