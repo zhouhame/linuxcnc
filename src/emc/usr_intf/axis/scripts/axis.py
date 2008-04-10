@@ -3248,7 +3248,8 @@ if sys.argv[1] != "-ini":
 inifile = emc.ini(sys.argv[2])
 vars.emcini.set(sys.argv[2])
 axiscount = int(inifile.find("TRAJ", "AXES"))
-jointnames = "012345678"[:axiscount]
+jointcount = int(inifile.find("TRAJ", "JOINTS"))
+jointnames = "012345678"[:jointcount]
 open_directory = inifile.find("DISPLAY", "PROGRAM_PREFIX")
 vars.machine.set(inifile.find("EMC", "MACHINE"))
 extensions = inifile.findall("FILTER", "PROGRAM_EXTENSION")
@@ -3337,24 +3338,24 @@ for i,j in enumerate("XYZABCUVW"):
             _("Unhome Axis _%s") % j)
 
 astep_size = step_size = 1
-for a in range(axiscount):
-    if s.axis_mask & (1<<a) == 0: continue
-    section = "AXIS_%d" % a
-    unit = inifile.find(section, "UNITS") or lu
-    unit = units(unit) * 25.4
-    if a < 3:
-        machine_limit_min[a] = float(inifile.find(section, "MIN_LIMIT")) / unit
-        machine_limit_max[a] = float(inifile.find(section, "MAX_LIMIT")) / unit
-    f = inifile.find(section, "SCALE") or inifile.find(section, "INPUT_SCALE") or "8000"
-    try:
-        f = abs(float(f.split()[0]))
-    except ValueError:
-        pass
-    else:
-        if f != 0:
-            step_size_tmp = min(step_size, 1. / f)
-            if a < 3: step_size = astep_size = step_size_tmp
-            else: astep_size = step_size_tmp
+#for a in range(axiscount):
+#    if s.axis_mask & (1<<a) == 0: continue
+#    section = "AXIS_%d" % a
+#    unit = inifile.find(section, "UNITS") or lu
+##    unit = units(unit) * 25.4
+#    if a < 3:
+#        machine_limit_min[a] = float(inifile.find(section, "MIN_LIMIT")) / unit
+#        machine_limit_max[a] = float(inifile.find(section, "MAX_LIMIT")) / unit
+#    f = inifile.find(section, "SCALE") or inifile.find(section, "INPUT_SCALE") or "8000"
+#    try:
+#        f = abs(float(f.split()[0]))
+#    except ValueError:
+#        pass
+#    else:
+#        if f != 0:
+#            step_size_tmp = min(step_size, 1. / f)
+#            if a < 3: step_size = astep_size = step_size_tmp
+#            else: astep_size = step_size_tmp
 
 if step_size != 1:
     root_window.tk.call("set_slider_min", step_size*30)
