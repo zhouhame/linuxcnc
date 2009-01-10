@@ -18,10 +18,10 @@
 #include "emc.hh"
 #include "emc_nml.hh"
 
-EMC_AXIS_STAT::EMC_AXIS_STAT():
-EMC_AXIS_STAT_MSG(EMC_AXIS_STAT_TYPE, sizeof(EMC_AXIS_STAT))
+EMC_JOINT_STAT::EMC_JOINT_STAT():
+EMC_JOINT_STAT_MSG(EMC_JOINT_STAT_TYPE, sizeof(EMC_JOINT_STAT))
 {
-    axisType = EMC_AXIS_LINEAR;
+    jointType = EMC_LINEAR;
     units = 1.0;
     backlash = 0.0;
     maxError = 0.0;
@@ -40,6 +40,8 @@ EMC_AXIS_STAT_MSG(EMC_AXIS_STAT_TYPE, sizeof(EMC_AXIS_STAT))
     maxSoftLimit = 0;
     minHardLimit = 0;
     maxHardLimit = 0;
+    homeOffset = 0;
+    setpoint = 0.0;
 }
 
 EMC_TRAJ_STAT::EMC_TRAJ_STAT():

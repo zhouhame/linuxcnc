@@ -1525,7 +1525,7 @@ class LivePlotter:
             if vars.metric.get(): m = m * 25.4
             vupdate(vars.maxvel_speed, float(int(600 * m)/10.0))
             root_window.tk.call("update_maxvel_slider")
-        vupdate(vars.override_limits, self.stat.axis[0]['override_limits'])
+        vupdate(vars.override_limits, self.stat.joint[0]['override_limits'])
         on_any_limit = 0
         for i, l in enumerate(self.stat.limit):
             if self.stat.axis_mask & (1<<i) and l:
@@ -3453,6 +3453,9 @@ if sys.argv[1] != "-ini":
 
 inifile = emc.ini(sys.argv[2])
 vars.emcini.set(sys.argv[2])
+axiscount = int(inifile.find("TRAJ", "AXES"))
+jointcount = int(inifile.find("KINS", "JOINTS"))
+jointnames = "012345678"[:jointcount]
 open_directory = inifile.find("DISPLAY", "PROGRAM_PREFIX")
 vars.machine.set(inifile.find("EMC", "MACHINE"))
 extensions = inifile.findall("FILTER", "PROGRAM_EXTENSION")
@@ -3559,21 +3562,21 @@ for i,j in enumerate("XYZABCUVW"):
 num_joints = int(inifile.find("TRAJ", "JOINTS") or live_axis_count)
 
 astep_size = step_size = 1
-for a in range(9):
-    if s.axis_mask & (1<<a) == 0: continue
-    section = "AXIS_%d" % a
-    unit = inifile.find(section, "UNITS") or lu
-    unit = units(unit) * 25.4
-    f = inifile.find(section, "SCALE") or inifile.find(section, "INPUT_SCALE") or "8000"
-    try:
-        f = abs(float(f.split()[0]))
-    except ValueError:
-        pass
-    else:
-        if f != 0:
-            step_size_tmp = min(step_size, 1. / f)
-            if a < 3: step_size = astep_size = step_size_tmp
-            else: astep_size = step_size_tmp
+#for a in range(9):
+#    if s.axis_mask & (1<<a) == 0: continue
+#    section = "AXIS_%d" % a
+#    unit = inifile.find(section, "UNITS") or lu
+#    unit = units(unit) * 25.4
+#    f = inifile.find(section, "SCALE") or inifile.find(section, "INPUT_SCALE") or "8000"
+#    try:
+#        f = abs(float(f.split()[0]))
+#    except ValueError:
+#        pass
+#    else:
+#        if f != 0:
+#            step_size_tmp = min(step_size, 1. / f)
+#            if a < 3: step_size = astep_size = step_size_tmp
+#            else: astep_size = step_size_tmp
 
 if inifile.find("DISPLAY", "MIN_LINEAR_VELOCITY"):
     root_window.tk.call("set_slider_min", float(inifile.find("DISPLAY", "MIN_LINEAR_VELOCITY"))*60)

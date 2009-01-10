@@ -43,7 +43,7 @@
 
   calls:
 
-  emcTrajSetAxes(int axes);
+  emcTrajSetJoints(int joints);
   emcTrajSetUnits(double linearUnits, double angularUnits);
   emcTrajSetCycleTime(double cycleTime);
   emcTrajSetVelocity(double vel);
@@ -71,7 +71,7 @@ static int loadTraj(EmcIniFile *trajInifile)
     trajInifile->EnableExceptions(EmcIniFile::ERR_CONVERSION);
 
     try{
-	int axes = 0;
+	int joints = 0;
 	int axismask = 0;
 	const char *coord = trajInifile->Find("COORDINATES", "TRAJ");
 	if(coord) {
@@ -87,11 +87,11 @@ static int loadTraj(EmcIniFile *trajInifile)
 	} else {
 	    axismask = 1 | 2 | 4;		// default: XYZ machine
 	}
-	trajInifile->Find(&axes, "AXES", "TRAJ");
+	trajInifile->Find(&joints, "JOINTS", "KINS");
 
-        if (0 != emcTrajSetAxes(axes, axismask)) {
+        if (0 != emcTrajSetJoints(joints, axismask)) {
             if (EMC_DEBUG & EMC_DEBUG_CONFIG) {
-                rcs_print("bad return value from emcTrajSetAxes\n");
+                rcs_print("bad return value from emcTrajSetJoints\n");
             }
             return -1;
         }

@@ -23,7 +23,9 @@
 extern "C" {
 #endif
 
+#define EMC_JOINT_MAX EMCMOT_MAX_JOINTS
 #define EMC_AXIS_MAX EMCMOT_MAX_AXIS
+
 
 #define EMC_MAX_DIO EMCMOT_MAX_DIO
 #define EMC_MAX_AIO EMCMOT_MAX_AIO
@@ -65,8 +67,13 @@ extern "C" {
     extern double TRAJ_DEFAULT_VELOCITY;
     extern double TRAJ_MAX_VELOCITY;
 
-    extern double AXIS_MAX_VELOCITY[EMC_AXIS_MAX];
-    extern double AXIS_MAX_ACCELERATION[EMC_AXIS_MAX];
+// JOINT_MAX_* are used to send limits to motion
+    extern double JOINT_MAX_VELOCITY[EMC_JOINT_MAX];
+    extern double JOINT_MAX_ACCELERATION[EMC_JOINT_MAX];
+
+// AXIS_MAX_* are used by canon
+    extern double AXIS_MAX_VELOCITY[EMC_JOINT_MAX];
+    extern double AXIS_MAX_ACCELERATION[EMC_JOINT_MAX];
 
     extern double SPINDLE_OFF_WAIT;
     extern double SPINDLE_ON_WAIT;

@@ -145,31 +145,54 @@ class EMC_AXIS_CMD_MSG:public RCS_CMD_MSG {
     int axis;
 };
 
-/**
- * Set the axis type to linear or angular.
- * Similiar to the AXIS_TYPE field in the ".ini" file.
+
+// declarations for EMC_JOINT classes
+
+/*
+ * JOINT command base class.
+ * This is the base class for all commands that operate on a single joint.
+ * The joint parameter specifies which joint the command affects.
+ * These commands are sent to the emcCommand buffer to be read by the
+ * TASK program that will then pass along corresponding messages to the
+ * motion system.
  */
-class EMC_AXIS_SET_AXIS:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_CMD_MSG:public RCS_CMD_MSG {
   public:
-    EMC_AXIS_SET_AXIS():EMC_AXIS_CMD_MSG(EMC_AXIS_SET_AXIS_TYPE,
-					 sizeof(EMC_AXIS_SET_AXIS)) {
+    EMC_JOINT_CMD_MSG(NMLTYPE t, size_t s):RCS_CMD_MSG(t, s) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 
-    // EMC_AXIS_LINEAR, EMC_AXIS_ANGULAR
-    unsigned char axisType;
+    // 0 = X, 1 = Y, 2 = Z, etc.
+    int joint;
+};
+
+/**
+ * Set the joint type to linear or angular.
+ * Similiar to the JOINT_TYPE field in the ".ini" file.
+ */
+class EMC_JOINT_SET_JOINT:public EMC_JOINT_CMD_MSG {
+  public:
+    EMC_JOINT_SET_JOINT():EMC_JOINT_CMD_MSG(EMC_JOINT_SET_JOINT_TYPE,
+					 sizeof(EMC_JOINT_SET_JOINT)) {
+    };
+
+    // For internal NML/CMS use only.
+    void update(CMS * cms);
+
+    // EMC_JOINT_LINEAR, EMC_JOINT_ANGULAR
+    unsigned char jointType;
 };
 
 /**
  * Set the units conversion factor.
- * @see EMC_AXIS_SET_INPUT_SCALE
+ * @see EMC_JOINT_SET_INPUT_SCALE
  */
-class EMC_AXIS_SET_UNITS:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_SET_UNITS:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_SET_UNITS():EMC_AXIS_CMD_MSG(EMC_AXIS_SET_UNITS_TYPE,
-					  sizeof(EMC_AXIS_SET_UNITS)) {
+    EMC_JOINT_SET_UNITS():EMC_JOINT_CMD_MSG(EMC_JOINT_SET_UNITS_TYPE,
+					  sizeof(EMC_JOINT_SET_UNITS)) {
     };
 
     // For internal NML/CMS use only.
@@ -184,10 +207,10 @@ class EMC_AXIS_SET_UNITS:public EMC_AXIS_CMD_MSG {
  * Set the Axis backlash.
  * This command sets the backlash value.
  */
-class EMC_AXIS_SET_BACKLASH:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_SET_BACKLASH:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_SET_BACKLASH():EMC_AXIS_CMD_MSG(EMC_AXIS_SET_BACKLASH_TYPE,
-					     sizeof(EMC_AXIS_SET_BACKLASH))
+    EMC_JOINT_SET_BACKLASH():EMC_JOINT_CMD_MSG(EMC_JOINT_SET_BACKLASH_TYPE,
+					     sizeof(EMC_JOINT_SET_BACKLASH))
     {
     };
 
@@ -197,11 +220,11 @@ class EMC_AXIS_SET_BACKLASH:public EMC_AXIS_CMD_MSG {
     double backlash;
 };
 
-class EMC_AXIS_SET_MIN_POSITION_LIMIT:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_SET_MIN_POSITION_LIMIT:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_SET_MIN_POSITION_LIMIT():EMC_AXIS_CMD_MSG
-	(EMC_AXIS_SET_MIN_POSITION_LIMIT_TYPE,
-	 sizeof(EMC_AXIS_SET_MIN_POSITION_LIMIT)) {
+    EMC_JOINT_SET_MIN_POSITION_LIMIT():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_SET_MIN_POSITION_LIMIT_TYPE,
+	 sizeof(EMC_JOINT_SET_MIN_POSITION_LIMIT)) {
     };
 
     // For internal NML/CMS use only.
@@ -210,11 +233,11 @@ class EMC_AXIS_SET_MIN_POSITION_LIMIT:public EMC_AXIS_CMD_MSG {
     double limit;
 };
 
-class EMC_AXIS_SET_MAX_POSITION_LIMIT:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_SET_MAX_POSITION_LIMIT:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_SET_MAX_POSITION_LIMIT():EMC_AXIS_CMD_MSG
-	(EMC_AXIS_SET_MAX_POSITION_LIMIT_TYPE,
-	 sizeof(EMC_AXIS_SET_MAX_POSITION_LIMIT)) {
+    EMC_JOINT_SET_MAX_POSITION_LIMIT():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_SET_MAX_POSITION_LIMIT_TYPE,
+	 sizeof(EMC_JOINT_SET_MAX_POSITION_LIMIT)) {
     };
 
     // For internal NML/CMS use only.
@@ -223,10 +246,36 @@ class EMC_AXIS_SET_MAX_POSITION_LIMIT:public EMC_AXIS_CMD_MSG {
     double limit;
 };
 
-class EMC_AXIS_SET_FERROR:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_SET_MIN_OUTPUT_LIMIT:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_SET_FERROR():EMC_AXIS_CMD_MSG(EMC_AXIS_SET_FERROR_TYPE,
-					   sizeof(EMC_AXIS_SET_FERROR)) {
+    EMC_JOINT_SET_MIN_OUTPUT_LIMIT():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_SET_MIN_OUTPUT_LIMIT_TYPE,
+	 sizeof(EMC_JOINT_SET_MIN_OUTPUT_LIMIT)) {
+    };
+
+    // For internal NML/CMS use only.
+    void update(CMS * cms);
+
+    double limit;
+};
+
+class EMC_JOINT_SET_MAX_OUTPUT_LIMIT:public EMC_JOINT_CMD_MSG {
+  public:
+    EMC_JOINT_SET_MAX_OUTPUT_LIMIT():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_SET_MAX_OUTPUT_LIMIT_TYPE,
+	 sizeof(EMC_JOINT_SET_MAX_OUTPUT_LIMIT)) {
+    };
+
+    // For internal NML/CMS use only.
+    void update(CMS * cms);
+
+    double limit;
+};
+
+class EMC_JOINT_SET_FERROR:public EMC_JOINT_CMD_MSG {
+  public:
+    EMC_JOINT_SET_FERROR():EMC_JOINT_CMD_MSG(EMC_JOINT_SET_FERROR_TYPE,
+					   sizeof(EMC_JOINT_SET_FERROR)) {
     };
 
     // For internal NML/CMS use only.
@@ -235,10 +284,10 @@ class EMC_AXIS_SET_FERROR:public EMC_AXIS_CMD_MSG {
     double ferror;
 };
 
-class EMC_AXIS_SET_MIN_FERROR:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_SET_MIN_FERROR:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_SET_MIN_FERROR():EMC_AXIS_CMD_MSG
-	(EMC_AXIS_SET_MIN_FERROR_TYPE, sizeof(EMC_AXIS_SET_MIN_FERROR)) {
+    EMC_JOINT_SET_MIN_FERROR():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_SET_MIN_FERROR_TYPE, sizeof(EMC_JOINT_SET_MIN_FERROR)) {
     };
 
     // For internal NML/CMS use only.
@@ -247,11 +296,11 @@ class EMC_AXIS_SET_MIN_FERROR:public EMC_AXIS_CMD_MSG {
     double ferror;
 };
 
-class EMC_AXIS_SET_HOMING_PARAMS:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_SET_HOMING_PARAMS:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_SET_HOMING_PARAMS():EMC_AXIS_CMD_MSG
-	(EMC_AXIS_SET_HOMING_PARAMS_TYPE,
-	 sizeof(EMC_AXIS_SET_HOMING_PARAMS)) {
+    EMC_JOINT_SET_HOMING_PARAMS():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_SET_HOMING_PARAMS_TYPE,
+	 sizeof(EMC_JOINT_SET_HOMING_PARAMS)) {
     };
 
     // For internal NML/CMS use only.
@@ -269,11 +318,11 @@ class EMC_AXIS_SET_HOMING_PARAMS:public EMC_AXIS_CMD_MSG {
     int volatile_home;
 };
 
-class EMC_AXIS_SET_MAX_VELOCITY:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_SET_MAX_VELOCITY:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_SET_MAX_VELOCITY():EMC_AXIS_CMD_MSG
-	(EMC_AXIS_SET_MAX_VELOCITY_TYPE,
-	 sizeof(EMC_AXIS_SET_MAX_VELOCITY)) {
+    EMC_JOINT_SET_MAX_VELOCITY():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_SET_MAX_VELOCITY_TYPE,
+	 sizeof(EMC_JOINT_SET_MAX_VELOCITY)) {
     };
 
     // For internal NML/CMS use only.
@@ -282,80 +331,80 @@ class EMC_AXIS_SET_MAX_VELOCITY:public EMC_AXIS_CMD_MSG {
     double vel;
 };
 
-class EMC_AXIS_INIT:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_INIT:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_INIT():EMC_AXIS_CMD_MSG(EMC_AXIS_INIT_TYPE,
-				     sizeof(EMC_AXIS_INIT)) {
+    EMC_JOINT_INIT():EMC_JOINT_CMD_MSG(EMC_JOINT_INIT_TYPE,
+				     sizeof(EMC_JOINT_INIT)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_HALT:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_HALT:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_HALT():EMC_AXIS_CMD_MSG(EMC_AXIS_HALT_TYPE,
-				     sizeof(EMC_AXIS_HALT)) {
+    EMC_JOINT_HALT():EMC_JOINT_CMD_MSG(EMC_JOINT_HALT_TYPE,
+				     sizeof(EMC_JOINT_HALT)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_ABORT:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_ABORT:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_ABORT():EMC_AXIS_CMD_MSG(EMC_AXIS_ABORT_TYPE,
-				      sizeof(EMC_AXIS_ABORT)) {
+    EMC_JOINT_ABORT():EMC_JOINT_CMD_MSG(EMC_JOINT_ABORT_TYPE,
+				      sizeof(EMC_JOINT_ABORT)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_ENABLE:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_ENABLE:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_ENABLE():EMC_AXIS_CMD_MSG(EMC_AXIS_ENABLE_TYPE,
-				       sizeof(EMC_AXIS_ENABLE)) {
+    EMC_JOINT_ENABLE():EMC_JOINT_CMD_MSG(EMC_JOINT_ENABLE_TYPE,
+				       sizeof(EMC_JOINT_ENABLE)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_DISABLE:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_DISABLE:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_DISABLE():EMC_AXIS_CMD_MSG(EMC_AXIS_DISABLE_TYPE,
-					sizeof(EMC_AXIS_DISABLE)) {
+    EMC_JOINT_DISABLE():EMC_JOINT_CMD_MSG(EMC_JOINT_DISABLE_TYPE,
+					sizeof(EMC_JOINT_DISABLE)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_HOME:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_HOME:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_HOME():EMC_AXIS_CMD_MSG(EMC_AXIS_HOME_TYPE,
-				     sizeof(EMC_AXIS_HOME)) {
+    EMC_JOINT_HOME():EMC_JOINT_CMD_MSG(EMC_JOINT_HOME_TYPE,
+				     sizeof(EMC_JOINT_HOME)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_UNHOME:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_UNHOME:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_UNHOME():EMC_AXIS_CMD_MSG(EMC_AXIS_UNHOME_TYPE,
-				     sizeof(EMC_AXIS_UNHOME)) {
+    EMC_JOINT_UNHOME():EMC_JOINT_CMD_MSG(EMC_JOINT_UNHOME_TYPE,
+				     sizeof(EMC_JOINT_UNHOME)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_JOG:public EMC_AXIS_CMD_MSG {
+class EMC_JOG_CONT:public EMC_AXIS_CMD_MSG {
   public:
-    EMC_AXIS_JOG():EMC_AXIS_CMD_MSG(EMC_AXIS_JOG_TYPE,
-				    sizeof(EMC_AXIS_JOG)) {
+    EMC_JOG_CONT():EMC_AXIS_CMD_MSG(EMC_JOG_CONT_TYPE,
+				    sizeof(EMC_JOG_CONT)) {
     };
 
     // For internal NML/CMS use only.
@@ -364,10 +413,10 @@ class EMC_AXIS_JOG:public EMC_AXIS_CMD_MSG {
     double vel;
 };
 
-class EMC_AXIS_INCR_JOG:public EMC_AXIS_CMD_MSG {
+class EMC_JOG_INCR:public EMC_AXIS_CMD_MSG {
   public:
-    EMC_AXIS_INCR_JOG():EMC_AXIS_CMD_MSG(EMC_AXIS_INCR_JOG_TYPE,
-					 sizeof(EMC_AXIS_INCR_JOG)) {
+    EMC_JOG_INCR():EMC_AXIS_CMD_MSG(EMC_JOG_INCR_TYPE,
+					 sizeof(EMC_JOG_INCR)) {
     };
 
     // For internal NML/CMS use only.
@@ -377,10 +426,10 @@ class EMC_AXIS_INCR_JOG:public EMC_AXIS_CMD_MSG {
     double vel;
 };
 
-class EMC_AXIS_ABS_JOG:public EMC_AXIS_CMD_MSG {
+class EMC_JOG_ABS:public EMC_AXIS_CMD_MSG {
   public:
-    EMC_AXIS_ABS_JOG():EMC_AXIS_CMD_MSG(EMC_AXIS_ABS_JOG_TYPE,
-					sizeof(EMC_AXIS_ABS_JOG)) {
+    EMC_JOG_ABS():EMC_AXIS_CMD_MSG(EMC_JOG_ABS_TYPE,
+					sizeof(EMC_JOG_ABS)) {
     };
 
     // For internal NML/CMS use only.
@@ -390,40 +439,63 @@ class EMC_AXIS_ABS_JOG:public EMC_AXIS_CMD_MSG {
     double vel;
 };
 
-class EMC_AXIS_ACTIVATE:public EMC_AXIS_CMD_MSG {
+class EMC_JOG_STOP:public EMC_AXIS_CMD_MSG {
   public:
-    EMC_AXIS_ACTIVATE():EMC_AXIS_CMD_MSG(EMC_AXIS_ACTIVATE_TYPE,
-					 sizeof(EMC_AXIS_ACTIVATE)) {
+    EMC_JOG_STOP():EMC_AXIS_CMD_MSG(EMC_JOG_STOP_TYPE,
+				    sizeof(EMC_JOG_STOP)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_DEACTIVATE:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_ACTIVATE:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_DEACTIVATE():EMC_AXIS_CMD_MSG(EMC_AXIS_DEACTIVATE_TYPE,
-					   sizeof(EMC_AXIS_DEACTIVATE)) {
+    EMC_JOINT_ACTIVATE():EMC_JOINT_CMD_MSG(EMC_JOINT_ACTIVATE_TYPE,
+					 sizeof(EMC_JOINT_ACTIVATE)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_OVERRIDE_LIMITS:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_DEACTIVATE:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_OVERRIDE_LIMITS():EMC_AXIS_CMD_MSG
-	(EMC_AXIS_OVERRIDE_LIMITS_TYPE, sizeof(EMC_AXIS_OVERRIDE_LIMITS)) {
+    EMC_JOINT_DEACTIVATE():EMC_JOINT_CMD_MSG(EMC_JOINT_DEACTIVATE_TYPE,
+					   sizeof(EMC_JOINT_DEACTIVATE)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 };
 
-class EMC_AXIS_LOAD_COMP:public EMC_AXIS_CMD_MSG {
+class EMC_JOINT_OVERRIDE_LIMITS:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_LOAD_COMP():EMC_AXIS_CMD_MSG(EMC_AXIS_LOAD_COMP_TYPE,
-					  sizeof(EMC_AXIS_LOAD_COMP)) {
+    EMC_JOINT_OVERRIDE_LIMITS():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_OVERRIDE_LIMITS_TYPE, sizeof(EMC_JOINT_OVERRIDE_LIMITS)) {
+    };
+
+    // For internal NML/CMS use only.
+    void update(CMS * cms);
+};
+
+class EMC_JOINT_SET_OUTPUT:public EMC_JOINT_CMD_MSG {
+  public:
+    EMC_JOINT_SET_OUTPUT():EMC_JOINT_CMD_MSG(EMC_JOINT_SET_OUTPUT_TYPE,
+					   sizeof(EMC_JOINT_SET_OUTPUT)) {
+    };
+
+    // For internal NML/CMS use only.
+    void update(CMS * cms);
+
+    double output;		// value for output, in physical units
+    // (volts)
+};
+
+class EMC_JOINT_LOAD_COMP:public EMC_JOINT_CMD_MSG {
+  public:
+    EMC_JOINT_LOAD_COMP():EMC_JOINT_CMD_MSG(EMC_JOINT_LOAD_COMP_TYPE,
+					  sizeof(EMC_JOINT_LOAD_COMP)) {
     };
 
     // For internal NML/CMS use only.
@@ -435,27 +507,45 @@ class EMC_AXIS_LOAD_COMP:public EMC_AXIS_CMD_MSG {
 };
 
 
-// AXIS status base class
-class EMC_AXIS_STAT_MSG:public RCS_STAT_MSG {
+/**
+ * Set the step parameters.
+ * This command sets the setup time of the direction signal,
+ * and the hold time of the step signal.
+ */
+class EMC_JOINT_SET_STEP_PARAMS:public EMC_JOINT_CMD_MSG {
   public:
-    EMC_AXIS_STAT_MSG(NMLTYPE t, size_t s):RCS_STAT_MSG(t, s) {
+    EMC_JOINT_SET_STEP_PARAMS():EMC_JOINT_CMD_MSG
+	(EMC_JOINT_SET_STEP_PARAMS_TYPE, sizeof(EMC_JOINT_SET_STEP_PARAMS)) {
     };
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 
-    int axis;
+    double setup_time;
+    double hold_time;
 };
 
-class EMC_AXIS_STAT:public EMC_AXIS_STAT_MSG {
+// JOINT status base class
+class EMC_JOINT_STAT_MSG:public RCS_STAT_MSG {
   public:
-    EMC_AXIS_STAT();
+    EMC_JOINT_STAT_MSG(NMLTYPE t, size_t s):RCS_STAT_MSG(t, s) {
+    };
+
+    // For internal NML/CMS use only.
+    void update(CMS * cms);
+
+    int joint;
+};
+
+class EMC_JOINT_STAT:public EMC_JOINT_STAT_MSG {
+  public:
+    EMC_JOINT_STAT();
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
 
     // configuration parameters
-    unsigned char axisType;	// EMC_AXIS_LINEAR, EMC_AXIS_ANGULAR
+    unsigned char jointType;	// EMC_JOINT_LINEAR, EMC_JOINT_ANGULAR
     double units;		// units per mm, deg for linear, angular
     double backlash;
     double maxError;
@@ -464,6 +554,9 @@ class EMC_AXIS_STAT:public EMC_AXIS_STAT_MSG {
     double maxPositionLimit;
     double maxFerror;
     double minFerror;
+
+    double homeOffset; // FIXME XXX do these 2 belong here?
+    double setpoint;
 
     // dynamic status
     double ferrorCurrent;	// current following error
@@ -882,19 +975,6 @@ class EMC_TRAJ_SET_TELEOP_ENABLE:public EMC_TRAJ_CMD_MSG {
     int enable;
 };
 
-class EMC_TRAJ_SET_TELEOP_VECTOR:public EMC_TRAJ_CMD_MSG {
-  public:
-    EMC_TRAJ_SET_TELEOP_VECTOR():EMC_TRAJ_CMD_MSG
-	(EMC_TRAJ_SET_TELEOP_VECTOR_TYPE,
-	 sizeof(EMC_TRAJ_SET_TELEOP_VECTOR)) {
-    };
-
-    // For internal NML/CMS use only.
-    void update(CMS * cms);
-
-    EmcPose vector;
-};
-
 class EMC_TRAJ_PROBE:public EMC_TRAJ_CMD_MSG {
   public:
     EMC_TRAJ_PROBE():EMC_TRAJ_CMD_MSG(EMC_TRAJ_PROBE_TYPE,
@@ -1120,7 +1200,7 @@ class EMC_MOTION_STAT:public EMC_MOTION_STAT_MSG {
 
     // aggregate of motion-related status classes
     EMC_TRAJ_STAT traj;
-    EMC_AXIS_STAT axis[EMC_AXIS_MAX];
+    EMC_JOINT_STAT joint[EMC_JOINT_MAX];
     EMC_SPINDLE_STAT spindle;
 
     int synch_di[EMC_MAX_DIO];  // motion inputs queried by interp
