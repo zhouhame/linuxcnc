@@ -1,18 +1,14 @@
 <?xml version="1.0"?>
 <interface>
-  <!-- interface-requires gtk+ 2.8 -->
   <!-- interface-requires gladevcp 0.0 -->
+  <!-- interface-requires gtk+ 2.8 -->
   <!-- interface-naming-policy project-wide -->
   <object class="GtkWindow" id="window1">
-    <property name="width_request">1024</property>
-    <property name="height_request">64</property>
     <child>
       <object class="GtkHButtonBox" id="hbuttonbox1">
-        <property name="width_request">1024</property>
-        <property name="height_request">64</property>
         <property name="visible">True</property>
-        <property name="spacing">5</property>
         <property name="homogeneous">True</property>
+        <property name="layout_style">spread</property>
         <child>
           <object class="HAL_Button" id="h_button_0">
             <property name="label" translatable="yes">h_button_0</property>

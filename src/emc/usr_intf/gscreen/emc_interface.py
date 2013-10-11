@@ -22,6 +22,7 @@ class emc_control:
                 self.masked = 0;
                 self.sb = 0;
                 self.jog_velocity = 100.0/60.0
+                self.angular_jog_velocity = 3600/60
                 self.mdi = 0
                 self.isjogging = [0,0,0,0,0,0,0,0,0]
                 self.restart_line_number = self.restart_reset_line = 0
@@ -122,11 +123,14 @@ class emc_control:
                 self.emccommand.mode(self.emc.MODE_MANUAL)
                 self.emccommand.spindle(self.emc.SPINDLE_DECREASE)
 
-        def continuous_jog_velocity(self, velocity):
-                self.jog_velocity = velocity / 60.0
+        def continuous_jog_velocity(self, velocity,angular=None):
+                if velocity == None:
+                    rate = self.angular_jog_velocity = angular / 60.0
+                else:
+                    rate = self.jog_velocity = velocity / 60.0
                 for i in range(9):
                         if self.isjogging[i]:
-                                self.emccommand.jog(self.emc.JOG_CONTINUOUS, i, self.isjogging[i] * self.jog_velocity)
+                                self.emccommand.jog(self.emc.JOG_CONTINUOUS, i, self.isjogging[i] * rate)
         
         def continuous_jog(self, axis, direction):
                 if self.masked: return
@@ -134,13 +138,21 @@ class emc_control:
                         self.isjogging[axis] = 0
                         self.emccommand.jog(self.emc.JOG_STOP, axis)
                 else:
-                        self.isjogging[axis] = direction
-                        self.emccommand.jog(self.emc.JOG_CONTINUOUS, axis, direction * self.jog_velocity)
+                    if axis in (3,4,5):
+                        rate = self.angular_jog_velocity
+                    else:
+                        rate = self.jog_velocity
+                    self.isjogging[axis] = direction
+                    self.emccommand.jog(self.emc.JOG_CONTINUOUS, axis, direction * rate)
 
         def incremental_jog(self, axis, direction, distance):
                 if self.masked: return
                 self.isjogging[axis] = direction
-                self.emccommand.jog(self.emc.JOG_INCREMENT, axis, direction * self.jog_velocity, distance)
+                if axis in (3,4,5):
+                    rate = self.angular_jog_velocity
+                else:
+                    rate = self.jog_velocity
+                self.emccommand.jog(self.emc.JOG_INCREMENT, axis, direction * rate, distance)
                 self.isjogging[axis] = 0
                 
         def quill_up(self):
@@ -375,10 +387,14 @@ class emc_status:
                         temp.append("%d" % (i/10))
                 else:
                         temp.append("%d.%d" % (i/10, i%10))
+            ipr = False
             for num,i in enumerate(temp):
                 if num == 8:active_codes.append("\n")
                 active_codes.append("G"+i)
+                if i == '95': ipr = True
+            self.data.IPR_mode = ipr
             self.data.active_gcodes = active_codes
+            # M codes
             temp = []; active_codes = []
             for i in sorted(self.emcstat.mcodes[1:]):
                 if i == -1: continue
@@ -386,8 +402,8 @@ class emc_status:
             for i in (temp):
                 active_codes.append("M"+i)
             self.data.active_mcodes = active_codes
-            feed_str = "%.1f" % self.emcstat.settings[1]
-            if feed_str.endswith(".0"): feed_str = feed_str[:-2]
+            feed_str = "%.3f" % self.emcstat.settings[1]
+            if feed_str.endswith(".000"): feed_str = feed_str[:-4]
             self.data.active_feed_command = feed_str
             self.data.active_spindle_command = "%.0f" % self.emcstat.settings[2]
 

@@ -185,11 +185,11 @@ ifeq ($(BUILD_PYTHON),yes)
 INCLUDE += -I$(INCLUDEPY)
 endif
 
-# Compilation options.	Perhaps some of these should come from Makefile.inc?
+# Compilation options.	Perhaps some of these should come from Makefile.inc? (CXXFLAGS now does)
 OPT := -Os
 DEBUG := -g -Wall
-CFLAGS := $(INCLUDE) $(OPT) $(DEBUG) -DULAPI $(call cc-option, -Wdeclaration-after-statement) $(BITOPS_DEFINE)
-CXXFLAGS := $(INCLUDE) $(OPT) $(DEBUG) -DULAPI $(BITOPS_DEFINE)
+CFLAGS := $(INCLUDE) $(OPT) $(DEBUG) -DULAPI $(call cc-option,-std=gnu99 -fgnu89-inline)
+CXXFLAGS := $(INCLUDE) $(CXXFLAGS)   -DULAPI $(DEBUG) $(OPT)
 
 ifeq ($(RUN_IN_PLACE),yes)
 LDFLAGS := -L$(LIB_DIR) -Wl,-rpath,$(LIB_DIR)
@@ -486,7 +486,7 @@ install-test:
 	@if type -path dpkg-query > /dev/null 2>&1 ; then  \
 		if dpkg-query -S $(DESTDIR)/usr/bin/linuxcnc > /dev/null 2>&1 || dpkg-query -S $(DESTDIR)/usr/bin/emc > /dev/null 2>&1 ; then \
 			echo "*** Error: Package version installed in $(DESTDIR)/usr"; \
-			echo "Use './configure --enable-run-in-place' or uninstall the linuxcnc2 package"; \
+			echo "Use './configure --enable-run-in-place' or uninstall the linuxcnc package"; \
 			echo "before installing."; \
 			exit 1; \
 		fi \
@@ -510,6 +510,7 @@ install-dirs:
 		$(DESTDIR)$(datadir)/axis/images \
 		$(DESTDIR)$(datadir)/axis/tcl \
 		$(DESTDIR)$(datadir)/gscreen/images \
+		$(DESTDIR)$(datadir)/gscreen/skins \
 		$(DESTDIR)$(datadir)/glade3/catalogs \
 		$(DESTDIR)$(datadir)/glade3/pixmaps \
 		$(DESTDIR)$(datadir)/gtksourceview-2.0/language-specs \
@@ -597,6 +598,7 @@ install-python: install-dirs
 	$(FILE) ../share/axis/images/*.gif ../share/axis/images/*.xbm ../share/axis/images/*.ngc $(DESTDIR)$(datadir)/axis/images
 	$(FILE) ../share/axis/tcl/*.tcl $(DESTDIR)$(datadir)/axis/tcl
 	$(FILE) ../share/gscreen/images/*.gif $(DESTDIR)$(datadir)/gscreen/images
+	$(TREE) ../share/gscreen/skins/* $(DESTDIR)$(datadir)/gscreen/skins
 endif
 
 install-kernel-dep:
@@ -658,7 +660,7 @@ EXTRA_CFLAGS = $(filter-out -ffast-math,$(RTFLAGS)) -D__MODULE__ -I$(BASEPWD) -I
 	-I$(BASEPWD)/emc/nml_intf -I$(BASEPWD)/emc/kinematics -I$(BASEPWD)/emc/motion \
 	-DSEQUENTIAL_SUPPORT -DHAL_SUPPORT -DDYNAMIC_PLCSIZE -DRT_SUPPORT -DOLD_TIMERS_MONOS_SUPPORT -DMODBUS_IO_MASTER \
 	-fno-fast-math $(call cc-option,-mieee-fp) -fno-unsafe-math-optimizations \
-	$(call cc-option,-Wframe-larger-than=2560)
+	$(call cc-option,-Wframe-larger-than=2560) $(call cc-option,-Wno-declaration-after-statement)
 ifneq ($(KERNELRELEASE),)
 ifeq ($(RTARCH):$(RTAI):$(filter $(RTFLAGS),-msse),x86_64:3:)
 EXTRA_CFLAGS += -msse
@@ -768,6 +770,7 @@ hostmot2-objs :=			  \
     hal/drivers/mesa-hostmot2/backported-strings.o  \
     hal/drivers/mesa-hostmot2/ioport.o	  \
     hal/drivers/mesa-hostmot2/encoder.o   \
+    hal/drivers/mesa-hostmot2/abs_encoder.o\
 	hal/drivers/mesa-hostmot2/resolver.o  \
     hal/drivers/mesa-hostmot2/pwmgen.o	  \
     hal/drivers/mesa-hostmot2/tp_pwmgen.o \
@@ -798,10 +801,8 @@ setsserial-objs :=			  \
     hal/drivers/mesa-hostmot2/setsserial.o  \
     $(MATHSTUB)
 
-ifneq "$(filter 2.6.%, $(kernelvers))" ""
 obj-$(CONFIG_PROBE_PARPORT) += probe_parport.o
 probe_parport-objs := hal/drivers/probe_parport.o $(MATHSTUB)
-endif
 endif
 
 obj-$(CONFIG_CLASSICLADDER_RT) += classicladder_rt.o

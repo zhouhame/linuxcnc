@@ -678,6 +678,8 @@ def dbg(message,mtype):
     for hint in _DEBUGSTRING:
         if hint == "all" or hint in mtype:
             print(message)
+            if "step" in _DEBUGSTRING:
+                c = raw_input("\n**** Debug Pause! ****")
             return
 
 def md5sum(filename):
@@ -1005,6 +1007,8 @@ class Data:
         self.s32out = 10
         self.floatsin = 10
         self.floatsout = 10
+        self.bitmem = 50
+        self.wordmem = 50
         self.tempexists = 0 # not present ( a blank CL program edited through pncconf)
         self.laddername = "custom.clp"
         self.modbus = 0 # not included
@@ -1634,6 +1638,13 @@ If you have a REALLY large config that you wish to convert to this newer version
         if not letter == "s" or (letter == "s" and stepgen):
             print >>file, "MAX_VELOCITY = %s" % get("maxvel")
             print >>file, "MAX_ACCELERATION = %s" % get("maxacc")
+            print >>file, "# The values below should be 25% larger than MAX_VELOCITY and MAX_ACCELERATION"
+            print >>file, "# If using BACKLASH compensation STEPGEN_MAXACCEL should be 100% larger."
+            print >>file, "STEPGEN_MAXVEL = %.1f" % (float(get("maxvel")) * 1.25)
+            if self[letter + "usecomp"] or self[letter + "usebacklash"]:
+                print >>file, "STEPGEN_MAXACCEL = %.1f" % (float(get("maxacc")) * 2.0)
+            else:
+                print >>file, "STEPGEN_MAXACCEL = %.1f" % (float(get("maxacc")) * 1.25)
         if encoder or resolver:
             if closedloop:
                 print >>file, "P = %s" % get("P")
@@ -1831,6 +1842,7 @@ If you have a REALLY large config that you wish to convert to this newer version
            return test
 
     def connect_axis(self, file, num, let):
+        def get(s): return self[let + s]
         axnum = "xyzabcuvws".index(let)
         title = 'AXIS'
         if let == 's':
@@ -1999,7 +2011,11 @@ If you have a REALLY large config that you wish to convert to this newer version
                 if closedloop:
                     print >>file, "net spindle-output      => " + potpinname + "spinout"
                 else:
-                    print >>file, "net spindle-vel-cmd     => " + potpinname + "spinout"
+                    if get("outputminlimit") == 0:
+                        signal = "spindle-vel-cmd-abs"
+                    else:
+                        signal = "spindle-vel-cmd"
+                    print >>file, "net %s     => %sspinout"%(signal,potpinname)
                 print >>file, "net machine-is-enabled      => " + potpinname +"spinena"
                 print >>file, "net spindle-ccw         => " + potpinname +"spindir"
                 print >>file
@@ -2015,12 +2031,16 @@ If you have a REALLY large config that you wish to convert to this newer version
                 print >>file, "setp   "+pwmpinname+"-maxlim    [%s_%d]OUTPUT_MAX_LIMIT"% (title, axnum)
                 print >>file
                 if let == 's':
+                    if get("outputminlimit") == 0:
+                        signal = "spindle-vel-cmd-abs"
+                    else:
+                        signal = "spindle-vel-cmd"
                     print >>file
                     if closedloop:
                         print >>file, "net spindle-output      => " + pwmpinname
                         print >>file, "net machine-is-enabled      => " + rawpinname + "spinena"
                     else:
-                        print >>file, "net spindle-vel-cmd     => " + pwmpinname
+                        print >>file, "net %s     => %s"%(signal,pwmpinname)
                         print >>file, "net machine-is-enabled      => " + rawpinname + "spinena"
                 else:
                     print >>file, "net %s-output                             => "% (let) + pwmpinname
@@ -2072,8 +2092,8 @@ If you have a REALLY large config that you wish to convert to this newer version
                 print >>file, "setp   " + steppinname + ".maxaccel         [%s_%d]MAX_ACCELERATION"% (title, axnum)
                 print >>file, "setp   " + steppinname + ".maxvel           [%s_%d]MAX_VELOCITY"% (title, axnum)
             else:
-                print >>file, "setp   " + steppinname + ".maxaccel         %.1f"%( (self[let+"maxacc"]*1.25) )
-                print >>file, "setp   " + steppinname + ".maxvel           %.1f"%( (self[let+"maxvel"]*1.25) )
+                print >>file, "setp   " + steppinname + ".maxaccel         [%s_%d]STEPGEN_MAXACCEL"% (title, axnum)
+                print >>file, "setp   " + steppinname + ".maxvel           [%s_%d]STEPGEN_MAXVEL"% (title, axnum)
             for i in stepinvertlist:
                    print >>file, "setp    "+i+".invert_output true"
             if let == "s":
@@ -2110,8 +2130,8 @@ If you have a REALLY large config that you wish to convert to this newer version
                 print >>file, "setp   " + steppinname + ".control-type     1"
             else:
                 print >>file, "setp   " + steppinname + ".control-type     0"
-            print >>file, "setp   " + steppinname + ".maxaccel         %.1f"%( (self[let+"maxacc"]*1.25) )
-            print >>file, "setp   " + steppinname + ".maxvel           %.1f"%( (self[let+"maxvel"]*1.25) )
+            print >>file, "setp   " + steppinname + ".maxaccel         [%s_%d]STEPGEN_MAXACCEL"% (title, axnum)
+            print >>file, "setp   " + steppinname + ".maxvel           [%s_%d]STEPGEN_MAXVEL"% (title, axnum)
             for i in stepinvertlist2:
                    print >>file, "setp    "+i+".invert_output true"
             if closedloop:
@@ -2172,16 +2192,18 @@ If you have a REALLY large config that you wish to convert to this newer version
         if let =='s':
             print >>file, "# ---setup spindle control signals---" 
             print >>file
-            print >>file, "net spindle-vel-cmd-rps    <=  motion.spindle-speed-out-rps"
-            print >>file, "net spindle-vel-cmd        <=  motion.spindle-speed-out"
-            print >>file, "net spindle-on             <=  motion.spindle-on"
-            print >>file, "net spindle-cw             <=  motion.spindle-forward"
-            print >>file, "net spindle-ccw            <=  motion.spindle-reverse"
-            print >>file, "net spindle-brake          <=  motion.spindle-brake"            
-            print >>file, "net spindle-revs           =>  motion.spindle-revs"
-            print >>file, "net spindle-at-speed       =>  motion.spindle-at-speed"
-            print >>file, "net spindle-vel-fb         =>  motion.spindle-speed-in"
-            print >>file, "net spindle-index-enable  <=>  motion.spindle-index-enable"
+            print >>file, "net spindle-vel-cmd-rps        <=  motion.spindle-speed-out-rps"
+            print >>file, "net spindle-vel-cmd-rps-abs    <=  motion.spindle-speed-out-rps-abs"
+            print >>file, "net spindle-vel-cmd            <=  motion.spindle-speed-out"
+            print >>file, "net spindle-vel-cmd-rpm-abs    <=  motion.spindle-speed-out-abs"
+            print >>file, "net spindle-on                 <=  motion.spindle-on"
+            print >>file, "net spindle-cw                 <=  motion.spindle-forward"
+            print >>file, "net spindle-ccw                <=  motion.spindle-reverse"
+            print >>file, "net spindle-brake              <=  motion.spindle-brake"            
+            print >>file, "net spindle-revs               =>  motion.spindle-revs"
+            print >>file, "net spindle-at-speed           =>  motion.spindle-at-speed"
+            print >>file, "net spindle-vel-fb             =>  motion.spindle-speed-in"
+            print >>file, "net spindle-index-enable      <=>  motion.spindle-index-enable"
             print >>file
             if not self.findsignal("spindle-at-speed"):
                 print >>file, "# ---Setup spindle at speed signals---"
@@ -2209,12 +2231,6 @@ If you have a REALLY large config that you wish to convert to this newer version
                     print >>file, ("net spindle-fb-filtered-rps    lowpass.spindle.out      =>   abs.spindle.in")
                     print >>file, ("net spindle-fb-filtered-abs-rps    abs.spindle.out      =>   scale.spindle.in")
                     print >>file, ("net spindle-fb-filtered-abs-rpm    scale.spindle.out")
-                else:
-                    print >>file, _("#  Use COMMANDED spindle velocity from LinuxCNC because no spindle encoder was specified")
-                    print >>file, _("#  COMMANDED velocity is signed so we use absolute component to remove sign")
-                    print >>file
-                    print >>file, ("net spindle-vel-cmd         =>    abs.spindle.in")
-                    print >>file, ("net absolute-spindle-vel    <=    abs.spindle.out")
             return
 
         min_limsig = self.min_lim_sig(let)
@@ -2681,8 +2697,8 @@ If you have a REALLY large config that you wish to convert to this newer version
             if self.userneededbldc:
                     self._bldcconfigstring = self._bldcconfigstring + self.userneededbldc + ","
             temp = self._bldcconfigstring.rstrip(",")
-            self._bldcconfigstring = temp
-            print >>file, "loadrt bldc cfg=%s"% temp
+            if not temp == "":
+                print >>file, "loadrt bldc cfg=%s"% temp
 
         if (self.pyvcp and self.pyvcpconnect == 1) or self.gladevcp or self.userneededabs >0:
             self.absnames=""
@@ -2697,7 +2713,8 @@ If you have a REALLY large config that you wish to convert to this newer version
                 self.absnames = self.absnames+"abs.%d"% (i)
                 if i <> self.userneededabs-1:
                     self.absnames = self.absnames+","
-            print >>file, "loadrt abs names=%s"% self.absnames
+            if not self.absnames == "":
+                print >>file, "loadrt abs names=%s"% self.absnames
 
         if (self.pyvcp and self.pyvcpconnect == 1) or self.gladevcp or self.userneededlowpass >0:
             self.lowpassnames=""
@@ -2710,7 +2727,8 @@ If you have a REALLY large config that you wish to convert to this newer version
                 self.lowpassnames=self.lowpassnames+"lowpass.spindle"
             temp = self.lowpassnames.rstrip(",")
             self.lowpassnames = temp
-            print >>file, "loadrt lowpass names=%s"% temp
+            if not self.lowpassnames == "":
+                print >>file, "loadrt lowpass names=%s"% temp
 
         pytest = self.pyvcp and self.pyvcphaltype == 1 and self.pyvcpconnect == 1
         gladetest = self.gladevcp and self.spindlespeedbar
@@ -2731,7 +2749,9 @@ If you have a REALLY large config that you wish to convert to this newer version
         if not at_speed and self.suseatspeed:
             print >>file, "loadrt near"
         if self.classicladder:
-            print >>file, "loadrt classicladder_rt numPhysInputs=%d numPhysOutputs=%d numS32in=%d numS32out=%d numFloatIn=%d numFloatOut=%d" %(self.digitsin , self.digitsout , self.s32in, self.s32out, self.floatsin, self.floatsout)
+            print >>file, ("loadrt classicladder_rt numPhysInputs=%d numPhysOutputs=%d numS32in=%d"
+                          " numS32out=%d numFloatIn=%d numFloatOut=%d numBits=%d numWords=%d") \
+                          %(self.digitsin , self.digitsout , self.s32in, self.s32out, self.floatsin, self.floatsout,self.bitmem,self.wordmem)
         
         if self.externalmpg or self.externalfo or self.externalmvo or self.externalso or self.joystickjog or self.userneededmux16 > 0:
             self.mux16names=""
@@ -3285,7 +3305,7 @@ If you have a REALLY large config that you wish to convert to this newer version
                     if spindle_enc:
                         print >>f1, ("net spindle-fb-filtered-abs-rpm       =>   gladevcp.spindle-speed")
                     else:
-                        print >>f1, ("net absolute-spindle-vel    =>    gladevcp.spindle-speed")
+                        print >>f1, ("net spindle-vel-cmd-rpm-abs    =>    gladevcp.spindle-speed")
                 if self.spindleatspeed:
                     print >>f1, ("net spindle-at-speed        =>    gladevcp.spindle-at-speed-led")
                 i = 0
@@ -3352,7 +3372,7 @@ If you have a REALLY large config that you wish to convert to this newer version
             if spindle_enc:
                 print >>f1, ("net spindle-fb-filtered-abs-rpm       =>   pyvcp.spindle-speed")
             else:
-                print >>f1, ("net absolute-spindle-vel    =>    pyvcp.spindle-speed")
+                print >>f1, ("net spindle-vel-cmd-rpm-abs    =>    pyvcp.spindle-speed")
             print >>f1, ("net spindle-at-speed        =>    pyvcp.spindle-at-speed-led")
             print >>f1
             print >>f1, _("# **** Setup of spindle speed display using pyvcp -END ****")
@@ -4052,7 +4072,11 @@ class App:
         while gtk.events_pending():
             gtk.main_iteration()
 
-    def __init__(self):
+    def __init__(self, debug=0):
+        print 'debug=',debug
+        if debug:
+            global _DEBUGSTRING
+            _DEBUGSTRING = ['all']
         gnome.init("pncconf", "0.6") 
         
         self.splash_screen()
@@ -4572,6 +4596,7 @@ Ok to reset data and start a new configuration?"),False):
                     #print name
                     temp = name.strip(".xml")
                     firmlist.append(temp)
+        dbg("\nXML list:%s"%firmlist,"firmname")
         for n,currentfirm in enumerate(firmlist):
             self.pbar.set_fraction(n*1.0/len(firmlist))
             while gtk.events_pending():
@@ -4581,7 +4606,7 @@ Ok to reset data and start a new configuration?"),False):
             numencoderpins = numpwmpins = 3; numstepperpins = 2; numttpwmpins = 0; numresolverpins = 10
             temp = root.find("boardname").text
             boardname = temp.lower()
-            dbg("\nBoard and firmwarename:  %s %s\n"%( boardname, currentfirm), "firm")
+            dbg("\nBoard and firmwarename:  %s %s\n"%( boardname, currentfirm), "firmraw")
             maxgpio  = int(root.find("iowidth").text) ; #print maxgpio
             numcnctrs  = int(root.find("ioports").text) ; #print numcnctrs
             portwidth = int(root.find("portwidth").text)
@@ -4666,7 +4691,7 @@ Ok to reset data and start a new configuration?"),False):
                 # this converts the XML file componennt names to pncconf's names
                 try:
                     modulename = pins[i].find("secondarymodulename").text
-                    dbg("secondary modulename:  %s, %s."%( tempfunc,modulename), "firm")
+                    dbg("secondary modulename:  %s, %s."%( tempfunc,modulename), "firmraw")
                     if modulename in ("Encoder","MuxedQCount","MuxedQCountSel","QCount"):
                         convertedname = pinconvertenc[tempfunc]
                     elif modulename == "ResolverMod":
@@ -4728,12 +4753,12 @@ Ok to reset data and start a new configuration?"),False):
                     temppinunit.append(instance_num)
                     tempmod = pins[i].find("secondarymodulename").text
                     tempfunc = tempfunc.upper()# normalize capitalization
-                    dbg("secondary modulename, function:  %s, %s."%( tempmod,tempfunc), "firm")
+                    dbg("secondary modulename, function:  %s, %s."%( tempmod,tempfunc), "firmraw")
                     if tempmod in("Encoder","MuxedQCount") and tempfunc in ("MUXED INDEX MASK (IN)","INDEXMASK (IN)"):
                         numencoderpins = 4
                     if tempmod =="SSerial" and tempfunc in ("TXDATA1","TXDATA2","TXDATA3","TXDATA4","TXDATA5","TXDATA6","TXDATA7","TXDATA8"):
                         sserialchannels +=1
-                dbg("temp: %s, converted name: %s. num %d"%( tempfunc,convertedname,instance_num), "firm")
+                dbg("temp: %s, converted name: %s. num %d"%( tempfunc,convertedname,instance_num), "firmraw")
                 if not tempcon in tempconlist:
                     tempconlist.append(tempcon)
                 temppinlist.append(temppinunit)
@@ -4752,7 +4777,8 @@ Ok to reset data and start a new configuration?"),False):
                     lowfreq,hifreq,tempconlist]
             for i in temppinlist:
                 temp.append(i)
-            dbg("5i25 firmware:\n%s\n"%( temp), "5i25")
+            if boardname == "5i25":
+                dbg("5i25 firmware:\n%s\n"%( temp), "5i25")
             mesafirmwaredata.append(temp)
         self.window.hide()
 
@@ -8161,6 +8187,8 @@ I hesitate to even allow it's use but at times it's very useful.\nDo you wish to
         self.widgets.s32out.set_value(self.data.s32out)
         self.widgets.floatsin.set_value(self.data.floatsin)
         self.widgets.floatsout.set_value(self.data.floatsout)
+        self.widgets.bitmem.set_value(self.data.bitmem)
+        self.widgets.wordmem.set_value(self.data.wordmem)
         self.widgets.halui.set_active(self.data.halui)
         self.widgets.ladderexist.set_active(self.data.ladderexist)
         self.widgets.laddertouchz.set_active(self.data.laddertouchz)
@@ -8178,6 +8206,8 @@ I hesitate to even allow it's use but at times it's very useful.\nDo you wish to
         self.data.s32in = self.widgets.s32in.get_value()
         self.data.s32out = self.widgets.s32out.get_value()
         self.data.floatsin = self.widgets.floatsin.get_value()
+        self.data.bitmem = self.widgets.bitmem.get_value()
+        self.data.wordmem = self.widgets.wordmem.get_value()
         self.data.floatsout = self.widgets.floatsout.get_value()
         self.data.halui = self.widgets.halui.get_active()
         self.data.ladderexist = self.widgets.ladderexist.get_active()
@@ -8254,6 +8284,8 @@ different program to copy to your configuration file.\nThe edited program will b
         self.widgets.s32out.set_sensitive(i)
         self.widgets.floatsin.set_sensitive(i)
         self.widgets.floatsout.set_sensitive(i)
+        self.widgets.bitmem.set_sensitive(i)
+        self.widgets.wordmem.set_sensitive(i)
         self.widgets.modbus.set_sensitive(i)
         self.widgets.ladderblank.set_sensitive(i)
         self.widgets.ladder1.set_sensitive(i)
@@ -8270,6 +8302,8 @@ different program to copy to your configuration file.\nThe edited program will b
         self.widgets.label_s32out.set_sensitive(i)
         self.widgets.label_floatin.set_sensitive(i)
         self.widgets.label_floatout.set_sensitive(i)
+        self.widgets.label_bitmem.set_sensitive(i)
+        self.widgets.label_wordmem.set_sensitive(i)
         self.widgets.ladderconnect.set_sensitive(i)
         if self.widgets.laddertouchz.get_active():
             i = self.data.gladevcphaluicmds
@@ -8835,7 +8869,7 @@ But there is not one in the machine-named folder.."""),True)
         halrun.write(""" 
               loadrt threads period1=%(period)d name1=fast fp1=0 period2=%(period2)d name2=slow 
               loadrt classicladder_rt numPhysInputs=%(din)d numPhysOutputs=%(dout)d numS32in=%(sin)d\
-               numS32out=%(sout)d numFloatIn=%(fin)d numFloatOut=%(fout)d
+               numS32out=%(sout)d numFloatIn=%(fin)d numFloatOut=%(fout)d numBits=%(bmem)d numWords=%(wmem)d
                addf classicladder.0.refresh slow
                start\n""" % {
                       'din': self.widgets.digitsin.get_value(),
@@ -8844,6 +8878,8 @@ But there is not one in the machine-named folder.."""),True)
                       'sout': self.widgets.s32out.get_value(), 
                       'fin':self.widgets.floatsin.get_value(),
                       'fout':self.widgets.floatsout.get_value(),
+                      'bmem':self.widgets.bitmem.get_value(),
+                      'wmem':self.widgets.wordmem.get_value(),
                       'period':100000, 
                       'period2':self.data.servoperiod
                  })
@@ -10049,13 +10085,14 @@ def makedirs(d):
         if detail.errno != errno.EEXIST: raise
 makedirs(os.path.expanduser("~/linuxcnc/configs"))
 
-opts, args = getopt.getopt(sys.argv[1:], "fr")
+opts, args = getopt.getopt(sys.argv[1:], "dfr")
 mode = 0
 force = 0
+debugswitch = 0
 for k, v in opts:
     if k == "-r": mode = 1
     if k == "-f": force = 1
-
+    if k == "-d": debugswitch = 1
 if mode:
     filename = args[0]
     data = Data()
