@@ -32,7 +32,7 @@ from hal_glib import GStat
 from hal_actions import _EMC_ActionBase, _EMC_Action
 from hal_filechooser import _EMC_FileChooser
 if pygtkcompat is not None:
-    from gi.repository import GtkSource as gtksourceview
+    from gi.repository import GtkSource as gtksourceview, Gdk
 else:
     import gtksourceview2 as gtksourceview
 
@@ -57,8 +57,18 @@ class EMC_SourceView(gtksourceview.View, _EMC_ActionBase):
         self.set_show_line_numbers(True)
         self.set_show_line_marks(True)
         self.set_highlight_current_line(True)
-        self.set_mark_category_icon_from_icon_name('motion', 'gtk-forward')
-        self.set_mark_category_background('motion', gtk.gdk.Color('#ff0'))
+        if pygtkcompat is not None:
+            attrs = gtksourceview.MarkAttributes();
+            color = Gdk.RGBA();
+            parsed = color.parse("lightgreen")
+            if parsed:
+                attrs.set_background(color)
+            attrs.set_icon_name('mption')
+            attrs.set_stock_id(gtk.STOCK_GO_FORWARD)
+            self.set_mark_attributes ('motion', attrs, 1)
+        else:
+            self.set_mark_category_icon_from_icon_name('motion', 'gtk-forward')
+            self.set_mark_category_background('motion', gtk.gdk.Color('#ff0'))
         self.found_text_tag = self.buf.create_tag(background="yellow")
         self.update_iter()
         self.connect('button-release-event', self.button_pressed)
