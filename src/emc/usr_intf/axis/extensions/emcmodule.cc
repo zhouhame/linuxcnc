@@ -2111,7 +2111,6 @@ METH(vertex9, "Get the 3d location for a 9d point"),
 
 PyMODINIT_FUNC
 initlinuxcnc(void) {
-    emcInitGlobals();
     verbose_nml_error_messages = 0;
     clear_rcs_print_flag(~0);
 
