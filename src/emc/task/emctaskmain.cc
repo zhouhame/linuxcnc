@@ -3173,8 +3173,6 @@ int main(int argc, char *argv[])
 	emctask_shutdown();
 	exit(1);
     }
-    // initialize globals
-    emcInitGlobals();
 
     if (done) {
 	emctask_shutdown();
