@@ -433,7 +433,6 @@ check_stuff ( "before command_handler()" );
         if (   emcmotCommand->command == EMCMOT_JOG_CONT
             || emcmotCommand->command == EMCMOT_JOG_INCR
             || emcmotCommand->command == EMCMOT_JOG_ABS
-            || emcmotCommand->command == EMCMOT_JOINT_ABORT
            ) {
            if (GET_MOTION_TELEOP_FLAG() && axis_num < 0) {
 	       rtapi_print_msg(RTAPI_MSG_ERR,
@@ -456,8 +455,6 @@ check_stuff ( "before command_handler()" );
                break;
           case EMCMOT_JOG_ABS:     rtapi_print_msg(RTAPI_MSG_ERR,"JOG_ABS\n");
                 break;
-          case EMCMOT_JOINT_ABORT: rtapi_print_msg(RTAPI_MSG_ERR,"JOG_ABORT\n");
-              break;
           default: break;
           }
           return;
@@ -524,7 +521,7 @@ check_stuff ( "before command_handler()" );
 	    rtapi_print_msg(RTAPI_MSG_DBG, " %d", joint_num);
 	    if (GET_MOTION_TELEOP_FLAG()) {
 		/* tell teleop planner to stop */
-		axis->teleop_tp.enable = 0;
+		if (axis != 0) axis->teleop_tp.enable = 0;
 		/* do nothing in teleop mode */
 	    } else if (GET_MOTION_COORD_FLAG()) {
 		/* do nothing in coord mode */
@@ -751,7 +748,7 @@ check_stuff ( "before command_handler()" );
 		break;
 	    }
             if (!GET_MOTION_TELEOP_FLAG()) {
-	        if (joint->wheel_jog_active) {
+	        if (joint->wheel_jjog_active) {
 		    /* can't do two kinds of jog at once */
 		    break;
 	        }
@@ -777,7 +774,7 @@ check_stuff ( "before command_handler()" );
 	        /* use max joint accel */
 	        joint->free_tp.max_acc = joint->acc_limit;
 	        /* lock out other jog sources */
-	        joint->kb_jog_active = 1;
+	        joint->kb_jjog_active = 1;
 	        /* and let it go */
 	        joint->free_tp.enable = 1;
 	        /*! \todo FIXME - should we really be clearing errors here? */
@@ -794,11 +791,9 @@ check_stuff ( "before command_handler()" );
 	        } else {
 		    axis->teleop_tp.pos_cmd = axis->min_pos_limit;
 	        }
-                /* set velocity of jog */
 	        axis->teleop_tp.max_vel = fabs(emcmotCommand->vel);
-	        /* use max axis accel */
 	        axis->teleop_tp.max_acc = axis->acc_limit;
-	        /* and let it go */
+	        axis->kb_ajog_active = 1;
 	        axis->teleop_tp.enable = 1;
             }
 	    break;
@@ -828,7 +823,7 @@ check_stuff ( "before command_handler()" );
 		break;
 	    }
             if (!GET_MOTION_TELEOP_FLAG()) {
-	        if (joint->wheel_jog_active) {
+	        if (joint->wheel_jjog_active) {
 		    /* can't do two kinds of jog at once */
 		    break;
 	        }
@@ -863,7 +858,7 @@ check_stuff ( "before command_handler()" );
 	        /* use max joint accel */
 	        joint->free_tp.max_acc = joint->acc_limit;
 	        /* lock out other jog sources */
-	        joint->kb_jog_active = 1;
+	        joint->kb_jjog_active = 1;
 	        /* and let it go */
 	        joint->free_tp.enable = 1;
 	        SET_JOINT_ERROR_FLAG(joint, 0);
@@ -886,13 +881,11 @@ check_stuff ( "before command_handler()" );
 	        if (tmp1 < axis->min_pos_limit) {
 		    break;
 	        }
-	        /* set target position */
 	        axis->teleop_tp.pos_cmd = tmp1;
-                /* set velocity of jog */
 	        axis->teleop_tp.max_vel = fabs(emcmotCommand->vel);
-	        /* use max axis accel */
 	        axis->teleop_tp.max_acc = axis->acc_limit;
-	        /* and let it go */
+	        axis->teleop_tp.max_acc = axis->acc_limit;
+	        axis->kb_ajog_active = 1;
 	        axis->teleop_tp.enable = 1;
             }
 	    break;
@@ -921,7 +914,7 @@ check_stuff ( "before command_handler()" );
 		SET_JOINT_ERROR_FLAG(joint, 1);
 		break;
 	    }
-	    if (joint->wheel_jog_active) {
+	    if (joint->wheel_jjog_active) {
 		/* can't do two kinds of jog at once */
 		break;
 	    }
@@ -949,7 +942,7 @@ check_stuff ( "before command_handler()" );
 	    /* use max joint accel */
 	    joint->free_tp.max_acc = joint->acc_limit;
 	    /* lock out other jog sources */
-	    joint->kb_jog_active = 1;
+	    joint->kb_jjog_active = 1;
 	    /* and let it go */
 	    joint->free_tp.enable = 1;
 	    SET_JOINT_ERROR_FLAG(joint, 0);
@@ -958,6 +951,10 @@ check_stuff ( "before command_handler()" );
 	       assume the homed position. Do all if they've all been moved
 	       since homing, otherwise just do this one */
 	    clearHomes(joint_num);
+if (!GET_MOTION_TELEOP_FLAG()) {
+} else {
+  axis->kb_ajog_active = 1;
+}
 	    break;
 
 	case EMCMOT_SET_TERM_COND:
