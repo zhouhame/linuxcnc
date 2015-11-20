@@ -914,7 +914,8 @@ static void handle_jjogwheels(void)
 	    continue;
 	}
         if (GET_MOTION_TELEOP_FLAG()) {
-            return;  //only joint jogging (no axis.N.jog* pins)
+            joint->free_tp.enable = 0;
+            return;
         }
 	/* must be in free mode and enabled */
 	if (GET_MOTION_COORD_FLAG()) {
@@ -1016,6 +1017,10 @@ static void handle_ajogwheels(void)
 	if ( delta == 0 ) {
             //just update counts
             continue;
+        }
+        if (!GET_MOTION_TELEOP_FLAG()) {
+            axis->teleop_tp.enable = 0;
+            return;
         }
         if (GET_MOTION_COORD_FLAG())          { continue; }
         if (!GET_MOTION_TELEOP_FLAG())        { continue; }
