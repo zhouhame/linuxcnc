@@ -2580,6 +2580,7 @@ class TclCommands(nf.TclCommands):
         else:
             system = vars.touch_off_system.get()
         if new_axis_value is None: return
+        save_task_mode = s.task_mode
         vars.touch_off_system.set(system)
         ensure_mode(linuxcnc.MODE_MDI)
         s.poll()
@@ -2599,6 +2600,7 @@ class TclCommands(nf.TclCommands):
         s.poll()
         o.tkRedraw()
         reload_file(False)
+        ensure_mode(save_task_mode)
 
     def touch_off_tool(event=None, new_axis_value = None):
         global system
@@ -2625,6 +2627,7 @@ class TclCommands(nf.TclCommands):
         else:
             system = vars.touch_off_system.get()
         if new_axis_value is None: return
+        save_task_mode = s.task_mode
         vars.touch_off_system.set(system)
         ensure_mode(linuxcnc.MODE_MDI)
         s.poll()
@@ -2647,6 +2650,7 @@ class TclCommands(nf.TclCommands):
         s.poll()
         o.tkRedraw()
         reload_file(False)
+        ensure_mode(save_task_mode)
 
     def set_axis_offset(event=None):
         commands.touch_off_system(new_axis_value=0.)
