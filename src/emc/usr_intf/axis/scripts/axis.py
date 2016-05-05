@@ -1126,6 +1126,10 @@ def open_file_guts(f, filtered=False, addrecent=True):
         # writes out the var file.  there was a reset here, and that
         # causes a var file write, but nukes important settings like
         # TLO.
+        # 
+        # FIXME: this isn't right on non-identity-kins machines, because
+        # they are not allowed to switch to MDI without homing first, so
+        # motion complains when loading the splash screen gcode
         ensure_mode(linuxcnc.MODE_MDI)
         c.wait_complete()
         ensure_mode(linuxcnc.MODE_AUTO)
