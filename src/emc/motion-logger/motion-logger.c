@@ -57,6 +57,7 @@ int mot_comp_id;
 emcmot_joint_t joint_array[EMCMOT_MAX_JOINTS];
 int num_joints = EMCMOT_MAX_JOINTS;
 emcmot_joint_t *joints = 0;
+int num_spindles = EMCMOT_MAX_SPINDLES;
 
 emcmot_axis_t axis_array[EMCMOT_MAX_AXIS];
 int num_axes = EMCMOT_MAX_AXIS;
@@ -114,13 +115,14 @@ static int init_comm_buffers(void) {
     emcmotError = &emcmotStruct->error;
 
     emcmotConfig->numJoints = num_joints;
+    emcmotConfig->numSpindles = num_spindles;
 
     emcmotStatus->vel = DEFAULT_VELOCITY;
     emcmotConfig->limitVel = DEFAULT_VELOCITY;
     emcmotStatus->acc = DEFAULT_ACCELERATION;
     emcmotStatus->feed_scale = 1.0;
     emcmotStatus->rapid_scale = 1.0;
-    emcmotStatus->spindle_scale = 1.0;
+    for (int n = 0; n < EMCMOT_MAX_SPINDLES; n++) emcmotStatus->spindle_status[n].scale = 1.0;
     emcmotStatus->net_feed_scale = 1.0;
     /* adaptive feed is off by default, feed override, spindle 
        override, and feed hold are on */
@@ -582,6 +584,11 @@ int main(int argc, char* argv[]) {
             case EMCMOT_SET_NUM_JOINTS:
                 log_print("SET_NUM_JOINTS %d\n", c->joint);
                 num_joints = c->joint;
+                break;
+
+            case EMCMOT_SET_NUM_SPINDLES:
+                log_print("SET_NUM_SPINDLES %d\n", c->spindle);
+                num_spindles = c->spindle;
                 break;
 
             case EMCMOT_SET_WORLD_HOME:

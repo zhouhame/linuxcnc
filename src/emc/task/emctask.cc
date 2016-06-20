@@ -254,7 +254,7 @@ int emcTaskSetState(int state)
     case EMC_TASK_STATE_OFF:
         emcMotionAbort();
 	// turn the machine servos off-- go into READY state
-        emcSpindleAbort();
+    for (t = 0; t < emcStatus->motion.traj.spindles; t++)  emcSpindleAbort(t);
 	for (t = 0; t < emcStatus->motion.traj.joints; t++) {
 	    emcJointDisable(t);
 	}
@@ -262,8 +262,7 @@ int emcTaskSetState(int state)
 	emcIoAbort(EMC_ABORT_TASK_STATE_OFF);
 	emcLubeOff();
 	emcTaskAbort();
-        emcSpindleAbort();
-        emcJointUnhome(-2); // only those joints which are volatile_home
+    emcJointUnhome(-2); // only those joints which are volatile_home
 	emcAbortCleanup(EMC_ABORT_TASK_STATE_OFF);
 	emcTaskPlanSynch();
 	break;
@@ -271,8 +270,8 @@ int emcTaskSetState(int state)
     case EMC_TASK_STATE_ON:
 	// turn the machine servos on
 	emcTrajEnable();
-	for (t = 0; t < emcStatus->motion.traj.joints; t++) {
-	    emcJointEnable(t);
+	for (t = 0; t < emcStatus->motion.traj.joints; t++){
+		emcJointEnable(t);
 	}
 	emcLubeOn();
 	break;
@@ -283,14 +282,14 @@ int emcTaskSetState(int state)
 	emcLubeOff();
 	emcTaskAbort();
         emcIoAbort(EMC_ABORT_TASK_STATE_ESTOP_RESET);
-        emcSpindleAbort();
+    for (t = 0; t < emcStatus->motion.traj.spindles; t++) emcSpindleAbort(t);
 	emcAbortCleanup(EMC_ABORT_TASK_STATE_ESTOP_RESET);
 	emcTaskPlanSynch();
 	break;
 
     case EMC_TASK_STATE_ESTOP:
         emcMotionAbort();
-        emcSpindleAbort();
+	for (t = 0; t < emcStatus->motion.traj.spindles; t++) emcSpindleAbort(t);
 	// go into estop-- do both IO estop and machine servos off
 	emcAuxEstopOn();
 	for (t = 0; t < emcStatus->motion.traj.joints; t++) {
@@ -300,7 +299,7 @@ int emcTaskSetState(int state)
 	emcLubeOff();
 	emcTaskAbort();
         emcIoAbort(EMC_ABORT_TASK_STATE_ESTOP);
-        emcSpindleAbort();
+	for (t = 0; t < emcStatus->motion.traj.spindles; t++) emcSpindleAbort(t);
         emcJointUnhome(-2); // only those joints which are volatile_home
 	emcAbortCleanup(EMC_ABORT_TASK_STATE_ESTOP);
 	emcTaskPlanSynch();
@@ -661,7 +660,7 @@ int emcTaskUpdate(EMC_TASK_STAT * stat)
 
     if(oldstate == EMC_TASK_STATE_ON && oldstate != stat->state) {
 	emcTaskAbort();
-        emcSpindleAbort();
+    for (int s = 0; s < emcStatus->motion.traj.spindles; s++) emcSpindleAbort(s);
         emcIoAbort(EMC_ABORT_TASK_STATE_NOT_ON);
 	emcAbortCleanup(EMC_ABORT_TASK_STATE_NOT_ON);
     }

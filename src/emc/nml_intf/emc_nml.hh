@@ -683,7 +683,7 @@ class EMC_TRAJ_SET_SPINDLE_SCALE:public EMC_TRAJ_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
-
+    int spindle;
     double scale;
 };
 
@@ -708,6 +708,7 @@ class EMC_TRAJ_SET_SO_ENABLE:public EMC_TRAJ_CMD_MSG {
     // For internal NML/CMS use only.
     void update(CMS * cms);
 
+    int spindle;
     unsigned char mode; //mode=0, override off (will work with 100% SO), mode != 0, override on, user can change SO
 };
 
@@ -885,6 +886,8 @@ class EMC_TRAJ_SET_SPINDLESYNC:public EMC_TRAJ_CMD_MSG {
         };
 
         void update(CMS * cms);
+
+        int spindle;
         double feed_per_revolution;
 	bool velocity_mode; 
 };
@@ -1022,6 +1025,7 @@ class EMC_TRAJ_STAT:public EMC_TRAJ_STAT_MSG {
     double angularUnits;	// units per degree
     double cycleTime;		// cycle time, in seconds
     int joints;			// maximum joint number
+    int spindles;			// maximum spindle number
     union {
         int deprecated_axes;
         int axes __attribute__((deprecated));			// maximum axis number
@@ -1040,7 +1044,7 @@ class EMC_TRAJ_STAT:public EMC_TRAJ_STAT_MSG {
     bool paused;			// non-zero means motion paused
     double scale;		// velocity scale factor
     double rapid_scale;		// rapid scale factor
-    double spindle_scale;	// spindle velocity scale factor
+    //double spindle_scale;	// moved to EMC_SPINDLE_STAT
 
     EmcPose position;		// current commanded position
     EmcPose actualPosition;	// current actual position, from forward kins
@@ -1062,7 +1066,7 @@ class EMC_TRAJ_STAT:public EMC_TRAJ_STAT_MSG {
     EmcPose dtg;
     double current_vel;         // in current move
     bool feed_override_enabled;
-    bool spindle_override_enabled;
+    //bool spindle_override_enabled; moved to SPINDLE_STAT
     bool adaptive_feed_enabled;
     bool feed_hold_enabled;
 };
@@ -1183,12 +1187,16 @@ class EMC_SPINDLE_STAT:public EMC_SPINDLE_STAT_MSG {
     void update(CMS * cms);
 
     double speed;		// spindle speed in RPMs
+    double spindle_scale;	// spindle over-ride
+    double css_maximum;
+    double css_factor;  // CSS Status
     int direction;		// 0 stopped, 1 forward, -1 reverse
     int brake;			// 0 released, 1 engaged
     int increasing;		// 1 increasing, -1 decreasing, 0 neither
     int enabled;		// non-zero means enabled
     int orient_state;
     int orient_fault;
+    bool spindle_override_enabled;
 };
 
 class EMC_MOTION_STAT:public EMC_MOTION_STAT_MSG {
@@ -1202,7 +1210,7 @@ class EMC_MOTION_STAT:public EMC_MOTION_STAT_MSG {
     EMC_TRAJ_STAT traj;
     EMC_JOINT_STAT joint[EMCMOT_MAX_JOINTS];
     EMC_AXIS_STAT axis[EMCMOT_MAX_AXIS];
-    EMC_SPINDLE_STAT spindle;
+    EMC_SPINDLE_STAT spindle[EMCMOT_MAX_SPINDLES];
 
     int synch_di[EMCMOT_MAX_DIO];  // motion inputs queried by interp
     int synch_do[EMCMOT_MAX_DIO];  // motion outputs queried by interp
@@ -1719,6 +1727,8 @@ class EMC_SPINDLE_CMD_MSG:public RCS_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
+
+    int spindle;
 };
 
 class EMC_SPINDLE_SPEED:public EMC_SPINDLE_CMD_MSG {
@@ -1729,6 +1739,8 @@ class EMC_SPINDLE_SPEED:public EMC_SPINDLE_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
+
+    int spindle;
     double speed;   // commanded speed in RPMs or maximum speed for CSS
     double factor;  // Zero for constant RPM.  numerator of speed for CSS
     double xoffset; // X axis offset compared to center of rotation, for CSS
@@ -1742,6 +1754,8 @@ class EMC_SPINDLE_ORIENT:public EMC_SPINDLE_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
+
+    int spindle;
     double orientation;   // desired spindle position
     int    mode;   
 };
@@ -1754,6 +1768,8 @@ class EMC_SPINDLE_WAIT_ORIENT_COMPLETE:public EMC_SPINDLE_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
+
+    int spindle;
     double timeout;   // how long to wait until spindle orient completes; > 0
 };
 
@@ -1768,6 +1784,7 @@ class EMC_SPINDLE_ON:public EMC_SPINDLE_CMD_MSG {
     // For internal NML/CMS use only.
     void update(CMS * cms);
 
+    int spindle;    // the spindle to be turned on
     double speed;   // commanded speed in RPMs or maximum speed for CSS
     double factor;  // Zero for constant RPM.  numerator of speed for CSS
     double xoffset; // X axis offset compared to center of rotation, for CSS
@@ -1781,6 +1798,8 @@ class EMC_SPINDLE_OFF:public EMC_SPINDLE_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
+
+    int spindle;    // the spindle to be turned off
 };
 
 class EMC_SPINDLE_INCREASE:public EMC_SPINDLE_CMD_MSG {
@@ -1792,7 +1811,7 @@ class EMC_SPINDLE_INCREASE:public EMC_SPINDLE_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
-
+    int spindle;        // the spindle to be increased
     double speed;		// commanded speed in RPMs
 };
 
@@ -1806,6 +1825,7 @@ class EMC_SPINDLE_DECREASE:public EMC_SPINDLE_CMD_MSG {
     // For internal NML/CMS use only.
     void update(CMS * cms);
 
+    int spindle;        // the spindle to be decreased
     double speed;		// commanded speed in RPMs
 };
 
@@ -1819,6 +1839,7 @@ class EMC_SPINDLE_CONSTANT:public EMC_SPINDLE_CMD_MSG {
     // For internal NML/CMS use only.
     void update(CMS * cms);
 
+    int spindle;        // the spindle to be constanted?
     double speed;		// commanded speed in RPMs
 };
 
@@ -1831,6 +1852,8 @@ class EMC_SPINDLE_BRAKE_RELEASE:public EMC_SPINDLE_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
+
+    int spindle;
 };
 
 class EMC_SPINDLE_BRAKE_ENGAGE:public EMC_SPINDLE_CMD_MSG {
@@ -1841,6 +1864,8 @@ class EMC_SPINDLE_BRAKE_ENGAGE:public EMC_SPINDLE_CMD_MSG {
 
     // For internal NML/CMS use only.
     void update(CMS * cms);
+
+    int spindle;
 };
 
 // EMC_COOLANT type declarations

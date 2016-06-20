@@ -368,8 +368,9 @@ int Interp::convert_cycle_g86(block_pointer block,
                               double y,  //!< y-value where cycle is executed    
                               double clear_z,    //!< z-value of clearance plane         
                               double bottom_z,   //!< value of z at bottom of cycle      
-                              double dwell,      //!< dwell time                         
-                              CANON_DIRECTION direction) //!< direction spindle turning at outset
+                              double dwell,      //!< dwell time
+                              CANON_DIRECTION direction, //!< direction spindle turning at outset
+                              int spindle)       // the spindle being used
 {
   CHKS(((direction != CANON_CLOCKWISE) &&
        (direction != CANON_COUNTERCLOCKWISE)),
@@ -377,12 +378,12 @@ int Interp::convert_cycle_g86(block_pointer block,
 
   cycle_feed(block, plane, x, y, bottom_z);
   DWELL(dwell);
-  STOP_SPINDLE_TURNING();
+  STOP_SPINDLE_TURNING(spindle);
   cycle_traverse(block, plane, x, y, clear_z);
   if (direction == CANON_CLOCKWISE)
-    START_SPINDLE_CLOCKWISE();
+    START_SPINDLE_CLOCKWISE(spindle);
   else
-    START_SPINDLE_COUNTERCLOCKWISE();
+    START_SPINDLE_COUNTERCLOCKWISE(spindle);
 
   return INTERP_OK;
 }
@@ -456,32 +457,33 @@ int Interp::convert_cycle_g87(block_pointer block,
                               double clear_z,    //!< z-value of clearance plane         
                               double middle_z,   //!< z-value of top of back bore        
                               double bottom_z,   //!< value of z at bottom of cycle      
-                              CANON_DIRECTION direction) //!< direction spindle turning at outset
+                              CANON_DIRECTION direction, //!< direction spindle turning at outset
+                              int spindle)       // the spindle being used
 {
   CHKS(((direction != CANON_CLOCKWISE) &&
        (direction != CANON_COUNTERCLOCKWISE)),
       NCE_SPINDLE_NOT_TURNING_IN_G87);
 
   cycle_traverse(block, plane, offset_x, offset_y, r);
-  STOP_SPINDLE_TURNING();
-  ORIENT_SPINDLE(0.0, direction);
+  STOP_SPINDLE_TURNING(spindle);
+  ORIENT_SPINDLE(spindle, 0.0, direction);
   cycle_traverse(block, plane, offset_x, offset_y, bottom_z);
   cycle_traverse(block, plane, x, y, bottom_z);
   if (direction == CANON_CLOCKWISE)
-    START_SPINDLE_CLOCKWISE();
+    START_SPINDLE_CLOCKWISE(spindle);
   else
-    START_SPINDLE_COUNTERCLOCKWISE();
+    START_SPINDLE_COUNTERCLOCKWISE(spindle);
   cycle_feed(block, plane, x, y, middle_z);
   cycle_feed(block, plane, x, y, bottom_z);
-  STOP_SPINDLE_TURNING();
-  ORIENT_SPINDLE(0.0, direction);
+  STOP_SPINDLE_TURNING(spindle);
+  ORIENT_SPINDLE(spindle,0.0, direction);
   cycle_traverse(block, plane, offset_x, offset_y, bottom_z);
   cycle_traverse(block, plane, offset_x, offset_y, clear_z);
   cycle_traverse(block, plane, x, y, clear_z);
   if (direction == CANON_CLOCKWISE)
-    START_SPINDLE_CLOCKWISE();
+    START_SPINDLE_CLOCKWISE(spindle);
   else
-    START_SPINDLE_COUNTERCLOCKWISE();
+    START_SPINDLE_COUNTERCLOCKWISE(spindle);
 
   return INTERP_OK;
 }
@@ -522,7 +524,8 @@ int Interp::convert_cycle_g88(block_pointer block,
                               double y,  //!< y-value where cycle is executed    
                               double bottom_z,   //!< value of z at bottom of cycle      
                               double dwell,      //!< dwell time                         
-                              CANON_DIRECTION direction) //!< direction spindle turning at outset
+                              CANON_DIRECTION direction, //!< direction spindle turning at outset
+                              int spindle)       // the spindle being used
 {
   CHKS(((direction != CANON_CLOCKWISE) &&
        (direction != CANON_COUNTERCLOCKWISE)),
@@ -530,12 +533,12 @@ int Interp::convert_cycle_g88(block_pointer block,
 
   cycle_feed(block, plane, x, y, bottom_z);
   DWELL(dwell);
-  STOP_SPINDLE_TURNING();
+  STOP_SPINDLE_TURNING(spindle);
   PROGRAM_STOP();               /* operator retracts the spindle here */
   if (direction == CANON_CLOCKWISE)
-    START_SPINDLE_CLOCKWISE();
+    START_SPINDLE_CLOCKWISE(spindle);
   else
-    START_SPINDLE_COUNTERCLOCKWISE();
+    START_SPINDLE_COUNTERCLOCKWISE(spindle);
 
   return INTERP_OK;
 }
@@ -795,6 +798,7 @@ int Interp::convert_cycle_xy(int motion, //!< a g-code between G_81 and G_89, a 
                             block_pointer block,        //!< pointer to a block of RS274 instructions      
                             setup_pointer settings)     //!< pointer to machine settings                   
 {
+  int spindle = settings->active_spindle;
   double aa;
   double aa_increment=0.;
   double bb;
@@ -911,7 +915,7 @@ int Interp::convert_cycle_xy(int motion, //!< a g-code between G_81 and G_89, a 
     break;
   case G_84:
       CYCLE_MACRO(convert_cycle_g84(block, CANON_PLANE_XY, aa, bb, clear_cc, cc,
-                                  settings->spindle_turning,
+                                  settings->spindle_turning[spindle],
                                   settings->speed_feed_mode)) break;
   case G_85:
       CYCLE_MACRO(convert_cycle_g85(block, CANON_PLANE_XY, aa, bb, r, clear_cc, cc))
@@ -923,8 +927,9 @@ int Interp::convert_cycle_xy(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g86(block, CANON_PLANE_XY, aa, bb, clear_cc, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle))
+    settings->cycle_p = block->p_number;
     break;
   case G_87:
     if (settings->motion_mode != G_87) {
@@ -943,7 +948,9 @@ int Interp::convert_cycle_xy(int motion, //!< a g-code between G_81 and G_89, a 
     }
     CYCLE_MACRO(convert_cycle_g87(block, CANON_PLANE_XY, aa, (aa + i), bb,
                                   (bb + j), r, clear_cc, k, cc,
-                                  settings->spindle_turning)) break;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    break;
   case G_88:
     CHKS(((settings->motion_mode != G_88) && (block->p_number == -1.0)),
         NCE_DWELL_TIME_P_WORD_MISSING_WITH_G88);
@@ -951,8 +958,9 @@ int Interp::convert_cycle_xy(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g88(block, CANON_PLANE_XY, aa, bb, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle))
+    settings->cycle_p = block->p_number;
     break;
 
   case G_89:
@@ -984,6 +992,7 @@ int Interp::convert_cycle_uv(int motion, //!< a g-code between G_81 and G_89, a 
                             block_pointer block,        //!< pointer to a block of RS274 instructions      
                             setup_pointer settings)     //!< pointer to machine settings                   
 {
+  int spindle = settings->active_spindle;
   double aa;
   double aa_increment=0.;
   double bb;
@@ -1082,8 +1091,9 @@ int Interp::convert_cycle_uv(int motion, //!< a g-code between G_81 and G_89, a 
     break;
   case G_84:
     CYCLE_MACRO(convert_cycle_g84(block, CANON_PLANE_UV, aa, bb, clear_cc, cc,
-                                  settings->spindle_turning,
-                                  settings->speed_feed_mode)) break;
+                                  settings->spindle_turning[spindle],
+                                  settings->speed_feed_mode))
+    break;
   case G_85:
     CYCLE_MACRO(convert_cycle_g85(block, CANON_PLANE_UV, aa, bb, r, clear_cc, cc))
       break;
@@ -1094,8 +1104,9 @@ int Interp::convert_cycle_uv(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g86(block, CANON_PLANE_UV, aa, bb, clear_cc, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle))
+    settings->cycle_p = block->p_number;
     break;
   case G_87:
     if (settings->motion_mode != G_87) {
@@ -1114,7 +1125,9 @@ int Interp::convert_cycle_uv(int motion, //!< a g-code between G_81 and G_89, a 
     }
     CYCLE_MACRO(convert_cycle_g87(block, CANON_PLANE_UV, aa, (aa + i), bb,
                                   (bb + j), r, clear_cc, k, cc,
-                                  settings->spindle_turning)) break;
+                                  settings->spindle_turning[spindle],
+                                  spindle))
+    break;
   case G_88:
     CHKS(((settings->motion_mode != G_88) && (block->p_number == -1.0)),
         NCE_DWELL_TIME_P_WORD_MISSING_WITH_G88);
@@ -1122,8 +1135,9 @@ int Interp::convert_cycle_uv(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g88(block, CANON_PLANE_UV, aa, bb, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle))
+    settings->cycle_p = block->p_number;
     break;
   case G_89:
     CHKS(((settings->motion_mode != G_89) && (block->p_number == -1.0)),
@@ -1132,7 +1146,7 @@ int Interp::convert_cycle_uv(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g89(block, CANON_PLANE_UV, aa, bb, clear_cc, cc,
                                   block->p_number))
-      settings->cycle_p = block->p_number;
+    settings->cycle_p = block->p_number;
     break;
   default:
     ERS(NCE_BUG_FUNCTION_SHOULD_NOT_HAVE_BEEN_CALLED);
@@ -1201,6 +1215,7 @@ int Interp::convert_cycle_yz(int motion, //!< a g-code between G_81 and G_89, a 
                             block_pointer block,        //!< pointer to a block of RS274/NGC instructions  
                             setup_pointer settings)     //!< pointer to machine settings                   
 {
+  int spindle = settings->active_spindle;
   double aa;
   double aa_increment=0.;
   double bb;
@@ -1299,8 +1314,9 @@ int Interp::convert_cycle_yz(int motion, //!< a g-code between G_81 and G_89, a 
     break;
   case G_84:
     CYCLE_MACRO(convert_cycle_g84(block, CANON_PLANE_YZ, aa, bb, clear_cc, cc,
-                                  settings->spindle_turning,
-                                  settings->speed_feed_mode)) break;
+                                  settings->spindle_turning[spindle],
+                                  settings->speed_feed_mode));
+    break;
   case G_85:
     CYCLE_MACRO(convert_cycle_g85(block, CANON_PLANE_YZ, aa, bb, r, clear_cc, cc))
       break;
@@ -1311,8 +1327,9 @@ int Interp::convert_cycle_yz(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g86(block, CANON_PLANE_YZ, aa, bb, clear_cc, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    settings->cycle_p = block->p_number;
     break;
   case G_87:
     if (settings->motion_mode != G_87) {
@@ -1331,7 +1348,9 @@ int Interp::convert_cycle_yz(int motion, //!< a g-code between G_81 and G_89, a 
     }
     CYCLE_MACRO(convert_cycle_g87(block, CANON_PLANE_YZ, aa, (aa + j), bb,
                                   (bb + k), r, clear_cc, i, cc,
-                                  settings->spindle_turning)) break;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    break;
   case G_88:
     CHKS(((settings->motion_mode != G_88) && (block->p_number == -1.0)),
         NCE_DWELL_TIME_P_WORD_MISSING_WITH_G88);
@@ -1339,8 +1358,9 @@ int Interp::convert_cycle_yz(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g88(block, CANON_PLANE_YZ, aa, bb, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    settings->cycle_p = block->p_number;
     break;
   case G_89:
     CHKS(((settings->motion_mode != G_89) && (block->p_number == -1.0)),
@@ -1370,6 +1390,7 @@ int Interp::convert_cycle_vw(int motion, //!< a g-code between G_81 and G_89, a 
                             block_pointer block,        //!< pointer to a block of RS274/NGC instructions  
                             setup_pointer settings)     //!< pointer to machine settings                   
 {
+  int spindle = settings->active_spindle;
   double aa;
   double aa_increment=0.;
   double bb;
@@ -1468,8 +1489,9 @@ int Interp::convert_cycle_vw(int motion, //!< a g-code between G_81 and G_89, a 
     break;
   case G_84:
     CYCLE_MACRO(convert_cycle_g84(block, CANON_PLANE_VW, aa, bb, clear_cc, cc,
-                                  settings->spindle_turning,
-                                  settings->speed_feed_mode)) break;
+                                  settings->spindle_turning[spindle],
+                                  settings->speed_feed_mode));
+    break;
   case G_85:
     CYCLE_MACRO(convert_cycle_g85(block, CANON_PLANE_VW, aa, bb, r, clear_cc, cc))
       break;
@@ -1480,8 +1502,9 @@ int Interp::convert_cycle_vw(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g86(block, CANON_PLANE_VW, aa, bb, clear_cc, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    settings->cycle_p = block->p_number;
     break;
   case G_87:
     if (settings->motion_mode != G_87) {
@@ -1500,7 +1523,9 @@ int Interp::convert_cycle_vw(int motion, //!< a g-code between G_81 and G_89, a 
     }
     CYCLE_MACRO(convert_cycle_g87(block, CANON_PLANE_VW, aa, (aa + j), bb,
                                   (bb + k), r, clear_cc, i, cc,
-                                  settings->spindle_turning)) break;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    break;
   case G_88:
     CHKS(((settings->motion_mode != G_88) && (block->p_number == -1.0)),
         NCE_DWELL_TIME_P_WORD_MISSING_WITH_G88);
@@ -1508,8 +1533,9 @@ int Interp::convert_cycle_vw(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g88(block, CANON_PLANE_VW, aa, bb, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    settings->cycle_p = block->p_number;
     break;
   case G_89:
     CHKS(((settings->motion_mode != G_89) && (block->p_number == -1.0)),
@@ -1596,6 +1622,7 @@ int Interp::convert_cycle_zx(int motion, //!< a g-code between G_81 and G_89, a 
                             block_pointer block,        //!< pointer to a block of RS274 instructions      
                             setup_pointer settings)     //!< pointer to machine settings                   
 {
+  int spindle = settings->active_spindle;
   double aa;
   double aa_increment=0.;
   double bb;
@@ -1694,11 +1721,12 @@ int Interp::convert_cycle_zx(int motion, //!< a g-code between G_81 and G_89, a 
     break;
   case G_84:
     CYCLE_MACRO(convert_cycle_g84(block, CANON_PLANE_XZ, aa, bb, clear_cc, cc,
-                                  settings->spindle_turning,
-                                  settings->speed_feed_mode)) break;
+                                  settings->spindle_turning[spindle],
+                                  settings->speed_feed_mode));
+    break;
   case G_85:
-    CYCLE_MACRO(convert_cycle_g85(block, CANON_PLANE_XZ, aa, bb, r, clear_cc, cc))
-      break;
+    CYCLE_MACRO(convert_cycle_g85(block, CANON_PLANE_XZ, aa, bb, r, clear_cc, cc));
+    break;
   case G_86:
     CHKS(((settings->motion_mode != G_86) && (block->p_number == -1.0)),
         NCE_DWELL_TIME_P_WORD_MISSING_WITH_G86);
@@ -1706,8 +1734,9 @@ int Interp::convert_cycle_zx(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g86(block, CANON_PLANE_XZ, aa, bb, clear_cc, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    settings->cycle_p = block->p_number;
     break;
   case G_87:
     if (settings->motion_mode != G_87) {
@@ -1726,7 +1755,9 @@ int Interp::convert_cycle_zx(int motion, //!< a g-code between G_81 and G_89, a 
     }
     CYCLE_MACRO(convert_cycle_g87(block, CANON_PLANE_XZ, aa, (aa + k), bb,
                                   (bb + i), r, clear_cc, j, cc,
-                                  settings->spindle_turning)) break;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    break;
   case G_88:
     CHKS(((settings->motion_mode != G_88) && (block->p_number == -1.0)),
         NCE_DWELL_TIME_P_WORD_MISSING_WITH_G88);
@@ -1734,8 +1765,9 @@ int Interp::convert_cycle_zx(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g88(block, CANON_PLANE_XZ, aa, bb, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    settings->cycle_p = block->p_number;
     break;
   case G_89:
     CHKS(((settings->motion_mode != G_89) && (block->p_number == -1.0)),
@@ -1764,6 +1796,7 @@ int Interp::convert_cycle_wu(int motion, //!< a g-code between G_81 and G_89, a 
                             block_pointer block,        //!< pointer to a block of RS274 instructions      
                             setup_pointer settings)     //!< pointer to machine settings                   
 {
+  int spindle = settings->active_spindle;
   double aa;
   double aa_increment=0.;
   double bb;
@@ -1862,8 +1895,9 @@ int Interp::convert_cycle_wu(int motion, //!< a g-code between G_81 and G_89, a 
     break;
   case G_84:
     CYCLE_MACRO(convert_cycle_g84(block, CANON_PLANE_UW, aa, bb, clear_cc, cc,
-                                  settings->spindle_turning,
-                                  settings->speed_feed_mode)) break;
+                                  settings->spindle_turning[spindle],
+                                  settings->speed_feed_mode));
+    break;
   case G_85:
     CYCLE_MACRO(convert_cycle_g85(block, CANON_PLANE_UW, aa, bb, r, clear_cc, cc))
       break;
@@ -1874,8 +1908,9 @@ int Interp::convert_cycle_wu(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g86(block, CANON_PLANE_UW, aa, bb, clear_cc, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    settings->cycle_p = block->p_number;
     break;
   case G_87:
     if (settings->motion_mode != G_87) {
@@ -1894,7 +1929,9 @@ int Interp::convert_cycle_wu(int motion, //!< a g-code between G_81 and G_89, a 
     }
     CYCLE_MACRO(convert_cycle_g87(block, CANON_PLANE_UW, aa, (aa + k), bb,
                                   (bb + i), r, clear_cc, j, cc,
-                                  settings->spindle_turning)) break;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    break;
   case G_88:
     CHKS(((settings->motion_mode != G_88) && (block->p_number == -1.0)),
         NCE_DWELL_TIME_P_WORD_MISSING_WITH_G88);
@@ -1902,8 +1939,9 @@ int Interp::convert_cycle_wu(int motion, //!< a g-code between G_81 and G_89, a 
       block->p_number == -1.0 ? settings->cycle_p : block->p_number;
     CYCLE_MACRO(convert_cycle_g88(block, CANON_PLANE_UW, aa, bb, cc,
                                   block->p_number,
-                                  settings->spindle_turning)) settings->
-      cycle_p = block->p_number;
+                                  settings->spindle_turning[spindle],
+                                  spindle));
+    settings->cycle_p = block->p_number;
     break;
   case G_89:
     CHKS(((settings->motion_mode != G_89) && (block->p_number == -1.0)),
